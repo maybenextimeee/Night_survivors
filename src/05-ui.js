@@ -22,6 +22,7 @@ const UI = {
     $("quests").classList.add("on");
     this.syncSkill();
     this.syncRack();
+    this._lvlSeen = null;
     this.buildQuests();
     this.buildTimeline();
   },
@@ -52,8 +53,8 @@ const UI = {
     const p = g.p;
     if (!p) return;
     $("clock").textContent = fmtTime(g.time);
-    $("sKills").textContent = g.kills;
-    $("sGold").textContent = g.gold;
+    $("sKills").textContent = fmtNum(g.kills);
+    $("sGold").textContent = fmtNum(g.gold);
     $("sWave").textContent = Math.floor(g.time / 60) + 1;
     /* до следующего сундука: золотой подсвечиваем заранее, чтобы было за чем бежать */
     const cl = chestLeft();
@@ -70,9 +71,21 @@ const UI = {
     const vial = $("hpVial");
     vial.classList.toggle("mid", hk < 0.5);
     vial.classList.toggle("low", hk < 0.25);
-    $("lvlTxt").textContent = p.level;
+    /* плашку уровня трогаем только когда уровень реально сменился,
+       иначе вспышка перезапускалась бы каждый кадр */
+    if (p.level !== this._lvlSeen) {
+      const el = $("lvlTxt");
+      el.textContent = p.level;
+      $("xpMax").textContent = "/ " + p.xpNext;
+      if (this._lvlSeen != null) {
+        el.classList.remove("up");
+        void el.offsetWidth;
+        el.classList.add("up");
+      }
+      this._lvlSeen = p.level;
+    }
     $("xpFill").style.transform = "scaleX(" + clamp(p.xp / p.xpNext, 0, 1) + ")";
-    $("xpNum").textContent = Math.floor(p.xp) + " / " + p.xpNext;
+    $("xpNum").textContent = Math.floor(p.xp);
     const bb = $("bossBar");
     if (g.boss && !g.boss.dead) {
       bb.classList.add("on");
@@ -240,7 +253,7 @@ const UI = {
       '<div class="qi-card" style="border-left-color:' + q.color + '">' + q.icon +
       '<span class="qi-t"><span class="qi-l">' + q.label + "</span>" +
       '<span class="qi-n">' + q.name + (q.kind === "kill" ? " ×" + q.goal : "") + "</span>" +
-      '<span class="qi-r">+' + q.reward + " ◈</span></span></div>").join("");
+      '<span class="qi-r">+' + cur(q.reward) + "</span></span></div>").join("");
     const el = $("questIntro");
     el.classList.remove("on");
     void el.offsetWidth;                       // перезапуск анимации
@@ -371,6 +384,7 @@ const UI = {
       if (f.st === "left" && got) return false;
       return f.rar < 0 || a.rar === f.rar;
     });
+    $("achBarFill").style.width = (save.ach.length / ACHIEVEMENTS.length * 100).toFixed(1) + "%";
     if (!list.length) {
       grid.innerHTML = '<div class="none">Под этот фильтр ничего не подходит.</div>';
       $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
@@ -386,6 +400,7 @@ const UI = {
         '<span class="rr">' + r.name + "</span></div>";
     }).join("");
     $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
+    $("achBarFill").style.width = (save.ach.length / ACHIEVEMENTS.length * 100).toFixed(1) + "%";
   },
 
   /* всплывашка в углу: по одной за раз, очередь не глотается */
@@ -509,24 +524,41 @@ const UI = {
     $("endTitle").textContent = won ? "Ты дожил до рассвета" : "Ты проиграл";
     const rows = [
       ["Продержался", fmtTime(s.time)],
-      ["Убито", s.kills],
+      ["Убито", fmtNum(s.kills)],
       ["Уровень", s.level],
-      ["Собрано осколков", s.gold],
-      ["Премия за боссов", s.bonus],
-      ["Премия за задания", s.quests],
+      ["Собрано осколков", fmtNum(s.gold)],
+      ["Премия за боссов", fmtNum(s.bonus)],
+      ["Премия за задания", fmtNum(s.quests)],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
     if (s.cycle > 0) rows.splice(1, 0, ["Кругов пройдено", s.cycle]);
     if (s.mods > 1.001) rows.push(["Модификаторы арены", "×" + s.mods.toFixed(2)]);
+    if (s.crits) rows.splice(3, 0, ["Пробоев брони", fmtNum(s.crits)]);
     if (won) rows.push(["Бонус за победу", "×1.50"]);
     let h = "";
     for (const r of rows) h += '<div class="l">' + r[0] + '</div><div class="v">' + r[1] + "</div>";
     h += "<hr>";
-    h += '<div class="l tot">Итого осколков</div><div class="v tot">+' + s.total + " ◈</div>";
+    h += '<div class="l tot">Итого осколков</div><div class="v tot">+' + cur(s.total) + "</div>";
     $("endTbl").innerHTML = h;
+    this.buildRunAch(s.ach);
     this.buildBreakdown();
     this.show("end");
     this.syncShards();
+  },
+
+  /* что открылось именно за этот забег: всплывашки в бою легко пропустить */
+  buildRunAch(ids) {
+    const box = $("endAch");
+    const list = (ids || []).map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
+    box.classList.toggle("on", list.length > 0);
+    if (!list.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="eh">Достижений за забег: ' + list.length + "</div>" +
+      '<div class="er">' + list.map(a => {
+        const r = ACH_RARITY[a.rar];
+        return '<div class="ea" style="--rar:' + r.color + '">' + svg(ICONS[a.ico], r.color) +
+          '<span class="t"><span class="r">' + r.name + "</span>" +
+          '<span class="n">' + a.name + "</span></span></div>";
+      }).join("") + "</div>";
   },
 
   /* разбор забега: сколько урона и убийств принесло каждое оружие */
@@ -546,7 +578,7 @@ const UI = {
       const pct = r.dmg / total * 100;
       h += '<div class="brow' + (r.ab ? " ab" : "") + '">' +
         '<span class="bn">' + r.name + "</span>" +
-        '<span class="bv">' + Math.round(r.dmg).toLocaleString("ru-RU") + "</span>" +
+        '<span class="bv">' + fmtNum(r.dmg) + "</span>" +
         '<span class="bp"><i style="width:' + pct.toFixed(1) + '%"></i><em>' + pct.toFixed(1) + "%</em></span>" +
         '<span class="bv">' + r.kills + "</span></div>";
     }
@@ -555,13 +587,43 @@ const UI = {
 
   syncShards() {
     this.syncColCount();
-    $("kShards").textContent = save.shards + " ◈";
-    $("shopShards").textContent = save.shards + " ◈";
-    $("charShards").textContent = save.shards + " ◈";
+    $("kShards").innerHTML = cur(save.shards);
+    $("shopShards").innerHTML = cur(save.shards);
+    $("charShards").innerHTML = cur(save.shards);
     $("kAch").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
-    $("bestTxt").textContent = save.best
-      ? fmtTime(save.best) + " · " + save.bestKills + " убийств" + (save.wins ? " · забегов закрыто: " + save.wins : "")
-      : "ни одного забега";
+    const ch = CHARS.find(c => c.id === save.char);
+    $("kChar").textContent = ch ? ch.name : "—";
+    this.buildDossier();
+  },
+
+  /* Досье: то же сохранение, но в лицо — иначе главное меню было просто
+     столбиком кнопок, а цифры прятались по вложенным экранам. */
+  buildDossier() {
+    $("mShards").innerHTML = cur(save.shards, "big");
+    const t = save.total;
+    const rows = [
+      ["Забегов", fmtNum(save.runs)],
+      ["Закрыто", fmtNum(save.wins)],
+      ["Лучшее время", save.best ? fmtTime(save.best) : "—"],
+      ["Макс. уровень", fmtNum(save.bestLevel || 0)],
+      ["Убийств всего", fmtNum(t.kills)],
+      ["Боссов", fmtNum(t.bosses)]
+    ];
+    $("mStats").innerHTML = rows.map(r =>
+      "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
+    $("mArenas").innerHTML = ARENAS.map((ar, i) => {
+      const open = arenaUnlocked(i), done = save.arenaDone.indexOf(ar.id) >= 0;
+      const m = arenaMods(ar.id);
+      const marks = done ? ARENA_MODS.filter(x => m[x.id]).map(x => x.short).join(" ") : "";
+      return '<div class="' + (done ? "done" : open ? "" : "lock") + '" style="--ac:' + ar.accent + '">' +
+        '<span class="an">' + ar.name + "</span>" +
+        (marks ? '<span class="mk">' + marks + "</span>" : "") +
+        '<span class="as">' + (done ? "пройдена" : open ? "открыта" : "закрыта") + "</span></div>";
+    }).join("");
+    $("bestTxt").textContent = save.beaten
+      ? "Игра пройдена. Первоисточник уничтожен."
+      : save.best ? "Лучший результат: " + fmtTime(save.best) + " · " + fmtNum(save.bestKills) + " убийств"
+        : "Ни одного забега — самое время начать.";
   },
 
   buildShop() {
@@ -571,13 +633,15 @@ const UI = {
       const lvl = metaLvl(u.id);
       const max = lvl >= u.max;
       const cost = max ? 0 : u.cost(lvl);
+      const poor = !max && save.shards < cost;
       const el = document.createElement("button");
-      el.className = "up" + (max ? " max" : "");
-      el.disabled = max || save.shards < cost;
+      el.className = "up" + (max ? " max" : "") + (poor ? " poor" : "");
+      el.disabled = max || poor;
       el.innerHTML = '<div class="h"><span class="nm">' + u.name + "</span>" +
-        '<span class="cost">' + (max ? "МАКС" : cost + " ◈") + "</span></div>" +
+        '<span class="cost">' + (max ? "МАКС" : cur(cost, poor ? "mute" : "")) + "</span></div>" +
         '<div class="d">' + u.d(Math.min(u.max, lvl + (max ? 0 : 1))) + "</div>" +
-        '<div class="pips">' + pipsFlex(lvl, u.max) + "</div>";
+        '<div class="lv"><span class="pips">' + pipsFlex(lvl, u.max) + "</span>" +
+        '<span class="lvn">' + lvl + " / " + u.max + "</span></div>";
       el.addEventListener("click", () => {
         const l = metaLvl(u.id);
         if (l >= u.max) return;
@@ -686,7 +750,7 @@ const UI = {
         '<span class="d">Стартовый модуль: <b style="color:' + WEAPONS[c.weapon].color + '">' + WEAPONS[c.weapon].name + "</b></span>" +
         (owned ? '<span class="lock" style="color:var(--cyan)">' + (save.char === c.id ? "◆ ВЫБРАН" : "ДОСТУПЕН") + "</span>"
           : !opened ? '<span class="lock">🔒 ' + (need ? need.text : "ещё закрыт") + "</span>"
-            : '<span class="lock">🔒 ' + c.price + " ◈</span>");
+            : '<span class="lock">🔒 ' + cur(c.price) + "</span>");
       el.addEventListener("click", () => {
         if (!opened) { this.toast("ЕЩЁ ЗАКРЫТО"); return; }
         if (owned) { save.char = c.id; Sfx.pick(); }
@@ -810,7 +874,7 @@ function frame(t) {
   hotkeys();
   if (g.state === "play" && g.p) {
     update(dt);
-    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1), g.arenaDef && g.arenaDef.music);
+    Sfx.music(dt, musicPush(), musicCfg());
     UI.syncHud();
   }
   render();

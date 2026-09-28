@@ -61,20 +61,42 @@ body{
 @keyframes lowpulse{0%,100%{opacity:1}50%{opacity:.62}}
 
 /* --- опыт: узкая рельса по центру верха --- */
-.xprail{position:absolute;left:50%;top:14px;transform:translateX(-50%);
-  width:min(420px,32vw);display:flex;align-items:center;gap:11px}
+.xprail{position:absolute;left:50%;top:15px;transform:translateX(-50%);
+  width:min(460px,34vw);display:flex;align-items:center;gap:12px}
+/* Уровень: компактный восьмиугольный жетон. Срез идёт по всем четырём
+   углам — у фигуры нет «тяжёлой» стороны, и цифра читается ровно по центру.
+   Ширина растёт вместе с числом, поэтому двузначный уровень не жмётся. */
 .xprail .lvl{font-family:var(--display);font-weight:700;font-size:15px;line-height:1;
-  width:34px;height:34px;flex:none;display:grid;place-items:center;color:#0b1a04;
-  background:linear-gradient(180deg,#d3ff7a,#8ee01f);
-  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
-  text-shadow:0 1px 0 rgba(255,255,255,.4)}
-.xptrack{flex:1;position:relative;height:9px;background:#080d18;border:1px solid #23341a;
-  clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
+  letter-spacing:.5px;min-width:28px;height:28px;padding:0 6px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--lime);background:linear-gradient(180deg,#16210f,#0a1108);
+  border:1px solid #47761a;font-variant-numeric:tabular-nums;
+  clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),
+    calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px);
+  box-shadow:inset 0 0 14px -6px var(--lime),0 0 14px -5px rgba(182,255,61,.55);
+  transition:box-shadow .2s,color .2s}
+/* короткая вспышка в момент уровня */
+.xprail .lvl.up{animation:lvlpop .5s ease}
+@keyframes lvlpop{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.18);color:#e8ffc0;
+    box-shadow:inset 0 0 14px -2px var(--lime),0 0 24px -2px rgba(182,255,61,.95)}
+  100%{transform:scale(1)}}
+.xptrack{flex:1;position:relative;height:10px;background:#070b14;
+  border:1px solid var(--line);overflow:hidden}
 .xptrack i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);
-  background:linear-gradient(90deg,#5ea310,#b6ff3d);transition:transform .16s linear;
-  box-shadow:0 0 14px rgba(182,255,61,.65)}
-.xpnum{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;
-  font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+  background:linear-gradient(90deg,#3f7a09,#8ede1c 70%,#d6ff86);
+  transition:transform .22s cubic-bezier(.3,.9,.35,1);
+  box-shadow:0 0 18px rgba(182,255,61,.5)}
+/* насечки поверх заливки: почти полная полоса иначе читается как сплошная */
+.xptrack:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 1px),rgba(6,9,16,.75) calc(10% - 1px) 10%)}
+.xpnum{font-family:var(--mono);font-size:13px;white-space:nowrap;letter-spacing:.4px;
+  font-variant-numeric:tabular-nums;min-width:78px;text-align:right;
+  display:flex;align-items:baseline;justify-content:flex-end;gap:5px}
+.xpnum b{font-weight:600;color:var(--ink)}
+.xpnum i{font-style:normal;color:var(--muted);font-size:11.5px}
 .bossbar{margin:10px auto 0;width:min(560px,60vw);display:none}
 .bossbar.on{display:block}
 .bossbar .name{font-family:var(--display);font-size:12px;letter-spacing:3px;text-transform:uppercase;
@@ -140,36 +162,65 @@ body{
 .screen{position:fixed;inset:0;z-index:10;display:none;place-items:center;padding:24px;
   background:rgba(4,6,12,.82);backdrop-filter:blur(3px);overflow-y:auto}
 .screen.on{display:grid}
-.panel{width:min(820px,100%);background:linear-gradient(180deg,var(--panel),#0a0e19);
-  border:1px solid var(--line);padding:28px 30px;position:relative}
-.panel:before{content:"";position:absolute;left:-1px;top:-1px;width:44px;height:3px;background:var(--cyan)}
+.panel{width:min(820px,100%);position:relative;padding:30px 32px;
+  background:linear-gradient(158deg,#111827 0%,var(--panel) 42%,#080c16 100%);
+  border:1px solid var(--line);
+  box-shadow:0 26px 70px -30px #000,inset 0 1px 0 rgba(255,255,255,.045)}
+.panel:before{content:"";position:absolute;left:-1px;top:-1px;width:56px;height:3px;
+  background:linear-gradient(90deg,var(--cyan),rgba(62,232,255,0))}
+/* уголки-скобки: дешёвый приём, но панель сразу перестаёт быть просто прямоугольником */
+.panel:after{content:"";position:absolute;right:-1px;bottom:-1px;width:26px;height:26px;
+  border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);opacity:.55;
+  pointer-events:none}
+
+/* --- валюта: осколок + число с разделителями --- */
+.cur{display:inline-flex;align-items:center;gap:6px;color:var(--gold);
+  font-variant-numeric:tabular-nums}
+.cur .shd{width:11px;height:14px;flex:none;filter:drop-shadow(0 0 5px rgba(255,194,61,.45))}
+.cur b{font-family:var(--mono);font-weight:600;letter-spacing:.6px}
+.cur.big .shd{width:17px;height:21px}
+.cur.big b{font-size:25px;letter-spacing:1px;
+  background:linear-gradient(180deg,#ffe9a8,#f0a81e);-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.cur.mute{color:var(--muted)}
+.cur.mute .shd{filter:none}
 h1{font-family:var(--display);font-size:clamp(38px,7vw,72px);line-height:.92;margin:0;letter-spacing:-1px;
   text-wrap:balance;text-transform:uppercase}
 h1 em{font-style:normal;color:var(--cyan);text-shadow:0 0 26px rgba(62,232,255,.5)}
-h2{font-family:var(--display);font-size:22px;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px}
+h2{font-family:var(--display);font-size:26px;letter-spacing:2.5px;text-transform:uppercase;
+  margin:0 0 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--muted);
   margin:0 0 10px}
 .lede{color:var(--muted);max-width:56ch;line-height:1.6;margin:14px 0 0;font-size:14px}
 .menu{display:flex;flex-direction:column;gap:8px;margin-top:26px;max-width:330px}
 button{font-family:var(--display);font-size:15px;letter-spacing:2px;text-transform:uppercase;
-  background:var(--panel-2);color:var(--ink);border:1px solid var(--line);padding:11px 16px;
-  text-align:left;cursor:pointer;transition:background .12s,border-color .12s,color .12s;position:relative}
-button:hover:not(:disabled){background:#1b2440;border-color:var(--cyan);color:var(--cyan)}
+  background:linear-gradient(180deg,var(--panel-2),#0e1526);color:var(--ink);
+  border:1px solid var(--line);padding:13px 18px;text-align:left;cursor:pointer;position:relative;
+  transition:background .14s,border-color .14s,color .14s,box-shadow .14s}
+button:hover:not(:disabled){background:linear-gradient(180deg,#1d2848,#141c33);
+  border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 22px -8px var(--cyan)}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 button:disabled{opacity:.4;cursor:not-allowed}
-button.primary{background:var(--cyan);border-color:var(--cyan);color:#04121a;font-weight:700}
-button.primary:hover{background:#7df1ff;border-color:#7df1ff;color:#04121a}
-button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;letter-spacing:1px}
+button.primary{background:linear-gradient(180deg,#6df0ff,var(--cyan));border-color:#7df1ff;
+  color:#04121a;font-weight:700;box-shadow:0 0 30px -10px var(--cyan)}
+button.primary:hover{background:linear-gradient(180deg,#a5f6ff,#5aecff);border-color:#a5f6ff;
+  color:#04121a;box-shadow:0 0 34px -6px var(--cyan)}
+button .k{font-family:var(--mono);font-size:10.5px;color:var(--muted);float:right;letter-spacing:1px;
+  font-variant-numeric:tabular-nums;line-height:1.5}
+button.primary .k{color:rgba(4,18,26,.65)}
+button:hover:not(:disabled) .k{color:inherit;opacity:.8}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .row button{flex:1;min-width:150px;text-align:center}
 .shards{font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:1px;
-  font-variant-numeric:tabular-nums}
+  font-variant-numeric:tabular-nums;vertical-align:middle}
+h2 .shards{font-size:15px}
 .hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.5px}
 .hint kbd{font-family:var(--mono);border:1px solid var(--line);padding:1px 6px;color:var(--ink);font-size:10px}
 
-/* level-up cards */
-#levelup .panel,#scrClass .panel{width:min(940px,100%);background:none;border:none;padding:0}
-#levelup .panel:before,#scrClass .panel:before{display:none}
+/* level-up cards — селектор был на #levelup, а экран зовётся #scrLevel,
+   поэтому правило годами не работало. Раз рамка панели выглядит уместно,
+   оставляем её обоим экранам и просто даём им ширину под три карточки. */
+#scrLevel .panel,#scrClass .panel{width:min(1000px,100%)}
 #scrClass .card .role{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
   color:var(--muted)}
 #scrClass .card.sel{border-color:var(--cyan);box-shadow:0 0 26px rgba(62,232,255,.2)}
@@ -222,22 +273,37 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .remember input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
 /* shop */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:10px;margin-top:16px;
-  max-height:56vh;overflow-y:auto;padding-right:6px}
-.up{background:var(--panel-2);border:1px solid var(--line);padding:13px 14px;display:flex;
-  flex-direction:column;gap:7px;text-align:left;cursor:pointer;align-items:stretch}
-.up:hover:not(:disabled){border-color:var(--gold);background:#1b2440}
-.up .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.up .nm{font-family:var(--display);font-size:13px;letter-spacing:1px;text-transform:uppercase}
-.up .cost{font-family:var(--mono);font-size:12px;color:var(--gold);white-space:nowrap}
-.up .d{font-size:12px;color:var(--muted);line-height:1.45;font-family:var(--body);text-transform:none;
-  letter-spacing:0}
-.up .pips{display:flex;gap:3px}
-.up .pips i{height:4px;flex:1;background:var(--line)}
-.up .pips i.f{background:var(--gold)}
-.up.max{opacity:.55}
-.up.max .cost{color:var(--muted)}
-.up:disabled{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(296px,1fr));gap:12px;margin-top:18px;
+  max-height:58vh;overflow-y:auto;padding-right:8px}
+.up{background:linear-gradient(170deg,var(--panel-2),#0b101d);border:1px solid var(--line);
+  padding:17px 18px 15px;display:flex;flex-direction:column;gap:10px;text-align:left;
+  cursor:pointer;align-items:stretch;position:relative;
+  transition:transform .13s,border-color .13s,box-shadow .13s,background .13s}
+.up:hover:not(:disabled){border-color:var(--gold);transform:translateY(-3px);
+  background:linear-gradient(170deg,#23202c,#14131f);box-shadow:0 12px 34px -18px var(--gold)}
+.up .h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.up .nm{font-family:var(--display);font-size:16.5px;letter-spacing:1.4px;text-transform:uppercase;
+  line-height:1.1}
+.up .cost{font-family:var(--mono);font-size:13px;color:var(--gold);white-space:nowrap}
+.up .d{font-size:13.5px;color:var(--muted);line-height:1.5;font-family:var(--body);
+  text-transform:none;letter-spacing:0;flex:1}
+/* уровень: полоски + подпись «3 / 5», иначе приходится считать глазами */
+.up .lv{display:flex;align-items:center;gap:10px}
+.up .pips{display:flex;gap:4px;flex:1}
+.up .pips i{height:6px;flex:1;background:#1a2237;border:1px solid transparent}
+.up .pips i.f{background:linear-gradient(180deg,#ffe08a,#e39a12);border-color:#7a5a12;
+  box-shadow:0 0 9px -2px var(--gold)}
+.up .lvn{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;
+  font-variant-numeric:tabular-nums;flex:none}
+.up.max{border-color:#3a4a2a}
+.up.max .cost{color:var(--lime);letter-spacing:2px;font-size:11px}
+.up.max .lvn{color:var(--lime)}
+.up:disabled{cursor:not-allowed}
+.up:disabled:not(.max){opacity:.5}
+/* не хватает осколков — подсвечиваем именно цену, а не гасим всю карточку */
+.up.poor{opacity:1;border-color:#2a3145}
+.up.poor .nm,.up.poor .d{opacity:.55}
+.up.poor .cost{color:#7a6a3d}
 
 /* characters */
 .chars{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px}
@@ -248,7 +314,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .chr .nm{font-family:var(--display);font-size:17px;letter-spacing:1px;text-transform:uppercase}
 .chr .d{font-size:12px;color:var(--muted);line-height:1.5;font-family:var(--body);
   text-transform:none;letter-spacing:0}
-.chr .lock{font-family:var(--mono);font-size:11px;color:var(--gold)}
+.chr .lock{font-family:var(--mono);font-size:11.5px;color:var(--gold);display:flex;
+  align-items:center;gap:6px;letter-spacing:.5px}
 .chr .tag{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan)}
 
 /* results */
@@ -459,20 +526,29 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .arena.lock:after{content:"ЗАКРЫТО";position:absolute;right:14px;top:13px;font-family:var(--mono);
   font-size:9px;letter-spacing:2px;color:var(--muted)}
 
-.achgrid{margin-top:16px;max-height:58vh;overflow-y:auto;overflow-x:hidden;padding-right:6px;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(318px,1fr));gap:8px;align-content:start}
-.achit{display:flex;align-items:center;gap:11px;padding:10px 12px;background:var(--panel-2);
-  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);min-height:56px}
-.achit .ico{width:26px;height:26px;flex:none}
-.achit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.achit .nm{font-family:var(--display);font-size:13.5px;letter-spacing:.6px;text-transform:uppercase;
-  color:var(--ink)}
-.achit .sub{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.35}
+.achbar{height:6px;background:#0a0f1c;border:1px solid var(--line);margin:2px 0 16px;position:relative}
+.achbar i{position:absolute;inset:0;right:auto;background:linear-gradient(90deg,#8fa3c8,var(--gold));
+  transition:width .3s ease;box-shadow:0 0 14px -3px var(--gold)}
+.achgrid{margin-top:16px;max-height:56vh;overflow-y:auto;overflow-x:hidden;padding-right:8px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;align-content:start}
+.achit{display:flex;align-items:center;gap:14px;padding:14px 16px;position:relative;
+  background:linear-gradient(170deg,var(--panel-2),#0b101d);
+  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);min-height:68px}
+.achit .ico{width:32px;height:32px;flex:none}
+.achit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.achit .nm{font-family:var(--display);font-size:16px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--ink);line-height:1.1}
+.achit .sub{font-size:12.5px;color:var(--muted);line-height:1.4;font-family:var(--body)}
 .achit .rr{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--rar,#8fa3c8);flex:none;align-self:flex-start}
-.achit.got{background:#16203a;box-shadow:inset 0 0 22px -12px var(--rar,#8fa3c8)}
-.achit.locked{opacity:.44}
+  color:var(--rar,#8fa3c8);flex:none;align-self:flex-start;opacity:.85}
+.achit.got{background:linear-gradient(170deg,#1a2440,#0d1424);
+  box-shadow:inset 0 0 34px -16px var(--rar,#8fa3c8)}
+/* галочка в углу: сразу видно, что собрано, даже без фильтра */
+.achit.got:after{content:"✓";position:absolute;right:14px;bottom:10px;font-size:13px;
+  color:var(--rar,#8fa3c8);opacity:.8}
+.achit.locked{opacity:.5}
 .achit.locked .nm{color:var(--muted)}
+.achit.locked .ico{opacity:.7}
 
 /* номер круга в бесконечности — приклеен к часам, чтобы не искать глазами */
 .clockrow{display:flex;align-items:baseline;gap:9px}
@@ -500,14 +576,67 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 /* --- фильтры на экране достижений --- */
 .filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
 .filters .sep{width:1px;height:18px;background:var(--line);margin:0 5px}
-.filters button{padding:5px 11px;background:#0b1020;border:1px solid var(--line);color:var(--muted);
-  font:inherit;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+.filters button{padding:7px 14px;background:#0b1020;border:1px solid var(--line);color:var(--muted);
+  font:inherit;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
   cursor:pointer;line-height:1.4}
 .filters button:hover{color:var(--ink);border-color:var(--rr,#3ee8ff)}
 .filters button.on{color:var(--rr,#3ee8ff);border-color:var(--rr,#3ee8ff);background:#12203a}
 .filters button i{font-style:normal;opacity:.6;margin-left:5px}
 .achgrid .none{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--muted);
   padding:22px 4px;text-align:center}
+
+/* --- главное меню: слева вход, справа досье по сохранению --- */
+.menupanel{width:min(1040px,100%);display:grid;grid-template-columns:1.15fr .85fr;gap:34px;
+  align-items:start}
+.menupanel h1{font-size:clamp(40px,6.4vw,74px)}
+.menupanel .menu{margin-top:24px;max-width:none}
+.dossier{border-left:1px solid var(--line);padding-left:26px;min-width:0}
+.dossier .eyebrow{margin-bottom:12px}
+.balance{display:flex;flex-direction:column;gap:5px;padding:14px 16px;
+  background:linear-gradient(140deg,#1a1508,#0d1220 60%);border:1px solid #47391a;
+  box-shadow:inset 0 0 30px -18px var(--gold)}
+.balance .bl{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted)}
+.dstats{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:14px;background:var(--line)}
+.dstats div{background:#0c1220;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.dstats span{font-family:var(--mono);font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--muted)}
+.dstats b{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.darenas{display:flex;flex-direction:column;gap:5px}
+.darenas div{display:flex;align-items:center;gap:9px;padding:7px 10px;background:#0c1220;
+  border:1px solid var(--line);border-left:3px solid var(--ac);font-family:var(--mono);font-size:11px}
+.darenas .an{flex:1;color:var(--ink);letter-spacing:.3px}
+.darenas .as{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.darenas div.done .as{color:var(--lime)}
+.darenas div.lock{opacity:.45}
+.darenas .mk{font-size:10px;color:var(--ac);letter-spacing:1px}
+@media (max-width:860px){
+  .menupanel{grid-template-columns:1fr;gap:24px}
+  .dossier{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:20px}
+}
+
+/* осколки в HUD — золотом, как и везде */
+.stats .sgold b{color:var(--gold)}
+
+/* --- достижения, полученные за забег: блок на экране итогов --- */
+.endach{display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.endach.on{display:block}
+.endach .eh{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px}
+.endach .er{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+.endach .ea{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#0f1628;
+  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);
+  animation:eaPop .3s backwards}
+.endach .ea:nth-child(2){animation-delay:.07s}
+.endach .ea:nth-child(3){animation-delay:.14s}
+.endach .ea:nth-child(n+4){animation-delay:.2s}
+@keyframes eaPop{from{opacity:0;transform:translateY(8px)}}
+.endach .ea .ico{width:22px;height:22px;flex:none}
+.endach .ea .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.endach .ea .n{font-family:var(--display);font-size:12.5px;letter-spacing:.8px;text-transform:uppercase}
+.endach .ea .r{font-family:var(--mono);font-size:8.5px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--rar,#8fa3c8)}
 </style>
 
 <canvas id="cv"></canvas>
@@ -522,7 +651,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
       <div class="timeline" id="timeline"><i class="tfill" id="tlFill"></i></div>
       <div class="stats">
         <span>УБИЙСТВ <b id="sKills">0</b></span>
-        <span>ОСКОЛКИ <b id="sGold">0</b></span>
+        <span class="sgold">ОСКОЛКИ <b id="sGold">0</b></span>
         <span>ВОЛНА <b id="sWave">1</b></span>
         <span id="chestStat">СУНДУК <b id="sChest">45 с</b></span>
         <span id="rushStat" hidden style="color:var(--lime)">РАЗГОН <b id="sRush">+0%</b></span>
@@ -537,7 +666,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="xprail">
     <span class="lvl" id="lvlTxt">1</span>
     <div class="xptrack"><i id="xpFill"></i></div>
-    <span class="xpnum" id="xpNum">0 / 14</span>
+    <span class="xpnum"><b id="xpNum">0</b><i id="xpMax">/ 14</i></span>
   </div>
   <div class="bossbar" id="bossBar">
     <div class="name" id="bossName">НАДЗИРАТЕЛЬ</div>
@@ -563,21 +692,32 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 <div id="dash"><span>РЫВОК</span><span class="key" id="dashKey">SPACE</span></div>
 
 <div class="screen on" id="scrMenu">
-  <div class="panel">
-    <p class="eyebrow">Забег начинается в полночь</p>
-    <h1>Night<br><em>survivors</em></h1>
-    <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
-      что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться
-      пятнадцать минут.</p>
-    <div class="menu">
-      <button class="primary" id="bPlay">Начать забег <span class="k">ENTER</span></button>
-      <button id="bShop">Мастерская <span class="k" id="kShards">0 ◈</span></button>
-      <button id="bChars">Операторы</button>
-      <button id="bCollection">Коллекция <span class="k" id="kCol">0 / 0</span></button>
-      <button id="bAch">Достижения <span class="k" id="kAch">0 / 0</span></button>
-      <button id="bHelp">Управление</button>
+  <div class="panel menupanel">
+    <div class="mleft">
+      <p class="eyebrow">Забег начинается в полночь</p>
+      <h1>Night<br><em>survivors</em></h1>
+      <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
+        что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться
+        пятнадцать минут.</p>
+      <div class="menu">
+        <button class="primary" id="bPlay">Начать забег <span class="k">ENTER</span></button>
+        <button id="bShop">Мастерская <span class="k" id="kShards"></span></button>
+        <button id="bChars">Операторы <span class="k" id="kChar">—</span></button>
+        <button id="bCollection">Коллекция <span class="k" id="kCol">0 / 0</span></button>
+        <button id="bAch">Достижения <span class="k" id="kAch">0 / 0</span></button>
+        <button id="bHelp">Управление</button>
+      </div>
     </div>
-    <p class="hint">Лучший результат: <span id="bestTxt">—</span></p>
+    <!-- правая колонка: сводка по сохранению, чтобы меню не было пустым -->
+    <aside class="dossier">
+      <p class="eyebrow">Досье оператора</p>
+      <div class="balance"><span class="bl">Осколков в банке</span>
+        <span class="bv" id="mShards"></span></div>
+      <div class="dstats" id="mStats"></div>
+      <p class="eyebrow" style="margin:18px 0 8px">Арены</p>
+      <div class="darenas" id="mArenas"></div>
+      <p class="hint" id="bestTxt">—</p>
+    </aside>
   </div>
 </div>
 
@@ -610,16 +750,16 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <p class="lede">По кварталу разбросаны <span style="color:var(--gold)">неонки</span> — ломай их любым
       уроном по площади. Внутри бывает аптечка или <span style="color:var(--cyan)">магнит</span>, который
       разом стягивает к тебе весь опыт и все аптечки с карты.</p>
-    <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки ◈</span> — их тратят
+    <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки</span> — их тратят
       в мастерской на постоянные улучшения. Они не сгорают при смерти, так что каждый забег двигает тебя дальше.</p>
     <div class="row"><button id="bHelpBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
 
 <div class="screen" id="scrShop">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow">Постоянные улучшения</p>
-    <h2>Мастерская <span class="shards" id="shopShards">0 ◈</span></h2>
+    <h2>Мастерская <span class="shards" id="shopShards"></span></h2>
     <div class="grid" id="shopGrid"></div>
     <div class="row">
       <button id="bShopBack">Назад <span class="k">ESC</span></button>
@@ -650,6 +790,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="panel wide">
     <p class="eyebrow">Что уже сделано</p>
     <h2>Достижения <span class="shards" id="achCount">0 / 0</span></h2>
+    <div class="achbar"><i id="achBarFill" style="width:0%"></i></div>
     <div class="filters" id="achFilters"></div>
     <div class="achgrid" id="achGrid"></div>
     <div class="row"><button id="bAchBack">Назад <span class="k">ESC</span></button></div>
@@ -657,16 +798,16 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 </div>
 
 <div class="screen" id="scrChars">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow">Кто выходит на забег</p>
-    <h2>Операторы <span class="shards" id="charShards">0 ◈</span></h2>
+    <h2>Операторы <span class="shards" id="charShards"></span></h2>
     <div class="chars" id="charGrid"></div>
     <div class="row"><button id="bCharBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
 
 <div class="screen" id="scrClass">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow" style="text-align:center">Способность на забег — выбери одну</p>
     <div class="cards" id="classRow"></div>
     <p class="hint" style="text-align:center">Бьёт по <kbd>ЛКМ</kbd> в сторону курсора · <kbd>ESC</kbd> назад</p>
@@ -704,6 +845,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <p class="eyebrow" id="endEyebrow">Забег окончен</p>
     <h1 style="font-size:clamp(30px,5vw,52px)" id="endTitle">Тебя погасили</h1>
     <div class="tbl" id="endTbl"></div>
+    <div class="endach" id="endAch"></div>
     <div class="break" id="endBreak"></div>
     <div class="row">
       <button class="primary" id="bAgain">Ещё раз <span class="k">ENTER</span></button>

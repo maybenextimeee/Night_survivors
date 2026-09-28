@@ -69,20 +69,42 @@ body{
 @keyframes lowpulse{0%,100%{opacity:1}50%{opacity:.62}}
 
 /* --- опыт: узкая рельса по центру верха --- */
-.xprail{position:absolute;left:50%;top:14px;transform:translateX(-50%);
-  width:min(420px,32vw);display:flex;align-items:center;gap:11px}
+.xprail{position:absolute;left:50%;top:15px;transform:translateX(-50%);
+  width:min(460px,34vw);display:flex;align-items:center;gap:12px}
+/* Уровень: компактный восьмиугольный жетон. Срез идёт по всем четырём
+   углам — у фигуры нет «тяжёлой» стороны, и цифра читается ровно по центру.
+   Ширина растёт вместе с числом, поэтому двузначный уровень не жмётся. */
 .xprail .lvl{font-family:var(--display);font-weight:700;font-size:15px;line-height:1;
-  width:34px;height:34px;flex:none;display:grid;place-items:center;color:#0b1a04;
-  background:linear-gradient(180deg,#d3ff7a,#8ee01f);
-  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
-  text-shadow:0 1px 0 rgba(255,255,255,.4)}
-.xptrack{flex:1;position:relative;height:9px;background:#080d18;border:1px solid #23341a;
-  clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
+  letter-spacing:.5px;min-width:28px;height:28px;padding:0 6px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--lime);background:linear-gradient(180deg,#16210f,#0a1108);
+  border:1px solid #47761a;font-variant-numeric:tabular-nums;
+  clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),
+    calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px),0 5px);
+  box-shadow:inset 0 0 14px -6px var(--lime),0 0 14px -5px rgba(182,255,61,.55);
+  transition:box-shadow .2s,color .2s}
+/* короткая вспышка в момент уровня */
+.xprail .lvl.up{animation:lvlpop .5s ease}
+@keyframes lvlpop{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.18);color:#e8ffc0;
+    box-shadow:inset 0 0 14px -2px var(--lime),0 0 24px -2px rgba(182,255,61,.95)}
+  100%{transform:scale(1)}}
+.xptrack{flex:1;position:relative;height:10px;background:#070b14;
+  border:1px solid var(--line);overflow:hidden}
 .xptrack i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);
-  background:linear-gradient(90deg,#5ea310,#b6ff3d);transition:transform .16s linear;
-  box-shadow:0 0 14px rgba(182,255,61,.65)}
-.xpnum{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;
-  font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+  background:linear-gradient(90deg,#3f7a09,#8ede1c 70%,#d6ff86);
+  transition:transform .22s cubic-bezier(.3,.9,.35,1);
+  box-shadow:0 0 18px rgba(182,255,61,.5)}
+/* насечки поверх заливки: почти полная полоса иначе читается как сплошная */
+.xptrack:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 1px),rgba(6,9,16,.75) calc(10% - 1px) 10%)}
+.xpnum{font-family:var(--mono);font-size:13px;white-space:nowrap;letter-spacing:.4px;
+  font-variant-numeric:tabular-nums;min-width:78px;text-align:right;
+  display:flex;align-items:baseline;justify-content:flex-end;gap:5px}
+.xpnum b{font-weight:600;color:var(--ink)}
+.xpnum i{font-style:normal;color:var(--muted);font-size:11.5px}
 .bossbar{margin:10px auto 0;width:min(560px,60vw);display:none}
 .bossbar.on{display:block}
 .bossbar .name{font-family:var(--display);font-size:12px;letter-spacing:3px;text-transform:uppercase;
@@ -148,36 +170,65 @@ body{
 .screen{position:fixed;inset:0;z-index:10;display:none;place-items:center;padding:24px;
   background:rgba(4,6,12,.82);backdrop-filter:blur(3px);overflow-y:auto}
 .screen.on{display:grid}
-.panel{width:min(820px,100%);background:linear-gradient(180deg,var(--panel),#0a0e19);
-  border:1px solid var(--line);padding:28px 30px;position:relative}
-.panel:before{content:"";position:absolute;left:-1px;top:-1px;width:44px;height:3px;background:var(--cyan)}
+.panel{width:min(820px,100%);position:relative;padding:30px 32px;
+  background:linear-gradient(158deg,#111827 0%,var(--panel) 42%,#080c16 100%);
+  border:1px solid var(--line);
+  box-shadow:0 26px 70px -30px #000,inset 0 1px 0 rgba(255,255,255,.045)}
+.panel:before{content:"";position:absolute;left:-1px;top:-1px;width:56px;height:3px;
+  background:linear-gradient(90deg,var(--cyan),rgba(62,232,255,0))}
+/* уголки-скобки: дешёвый приём, но панель сразу перестаёт быть просто прямоугольником */
+.panel:after{content:"";position:absolute;right:-1px;bottom:-1px;width:26px;height:26px;
+  border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);opacity:.55;
+  pointer-events:none}
+
+/* --- валюта: осколок + число с разделителями --- */
+.cur{display:inline-flex;align-items:center;gap:6px;color:var(--gold);
+  font-variant-numeric:tabular-nums}
+.cur .shd{width:11px;height:14px;flex:none;filter:drop-shadow(0 0 5px rgba(255,194,61,.45))}
+.cur b{font-family:var(--mono);font-weight:600;letter-spacing:.6px}
+.cur.big .shd{width:17px;height:21px}
+.cur.big b{font-size:25px;letter-spacing:1px;
+  background:linear-gradient(180deg,#ffe9a8,#f0a81e);-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.cur.mute{color:var(--muted)}
+.cur.mute .shd{filter:none}
 h1{font-family:var(--display);font-size:clamp(38px,7vw,72px);line-height:.92;margin:0;letter-spacing:-1px;
   text-wrap:balance;text-transform:uppercase}
 h1 em{font-style:normal;color:var(--cyan);text-shadow:0 0 26px rgba(62,232,255,.5)}
-h2{font-family:var(--display);font-size:22px;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px}
+h2{font-family:var(--display);font-size:26px;letter-spacing:2.5px;text-transform:uppercase;
+  margin:0 0 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--muted);
   margin:0 0 10px}
 .lede{color:var(--muted);max-width:56ch;line-height:1.6;margin:14px 0 0;font-size:14px}
 .menu{display:flex;flex-direction:column;gap:8px;margin-top:26px;max-width:330px}
 button{font-family:var(--display);font-size:15px;letter-spacing:2px;text-transform:uppercase;
-  background:var(--panel-2);color:var(--ink);border:1px solid var(--line);padding:11px 16px;
-  text-align:left;cursor:pointer;transition:background .12s,border-color .12s,color .12s;position:relative}
-button:hover:not(:disabled){background:#1b2440;border-color:var(--cyan);color:var(--cyan)}
+  background:linear-gradient(180deg,var(--panel-2),#0e1526);color:var(--ink);
+  border:1px solid var(--line);padding:13px 18px;text-align:left;cursor:pointer;position:relative;
+  transition:background .14s,border-color .14s,color .14s,box-shadow .14s}
+button:hover:not(:disabled){background:linear-gradient(180deg,#1d2848,#141c33);
+  border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 22px -8px var(--cyan)}
 button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 button:disabled{opacity:.4;cursor:not-allowed}
-button.primary{background:var(--cyan);border-color:var(--cyan);color:#04121a;font-weight:700}
-button.primary:hover{background:#7df1ff;border-color:#7df1ff;color:#04121a}
-button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;letter-spacing:1px}
+button.primary{background:linear-gradient(180deg,#6df0ff,var(--cyan));border-color:#7df1ff;
+  color:#04121a;font-weight:700;box-shadow:0 0 30px -10px var(--cyan)}
+button.primary:hover{background:linear-gradient(180deg,#a5f6ff,#5aecff);border-color:#a5f6ff;
+  color:#04121a;box-shadow:0 0 34px -6px var(--cyan)}
+button .k{font-family:var(--mono);font-size:10.5px;color:var(--muted);float:right;letter-spacing:1px;
+  font-variant-numeric:tabular-nums;line-height:1.5}
+button.primary .k{color:rgba(4,18,26,.65)}
+button:hover:not(:disabled) .k{color:inherit;opacity:.8}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .row button{flex:1;min-width:150px;text-align:center}
 .shards{font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:1px;
-  font-variant-numeric:tabular-nums}
+  font-variant-numeric:tabular-nums;vertical-align:middle}
+h2 .shards{font-size:15px}
 .hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.5px}
 .hint kbd{font-family:var(--mono);border:1px solid var(--line);padding:1px 6px;color:var(--ink);font-size:10px}
 
-/* level-up cards */
-#levelup .panel,#scrClass .panel{width:min(940px,100%);background:none;border:none;padding:0}
-#levelup .panel:before,#scrClass .panel:before{display:none}
+/* level-up cards — селектор был на #levelup, а экран зовётся #scrLevel,
+   поэтому правило годами не работало. Раз рамка панели выглядит уместно,
+   оставляем её обоим экранам и просто даём им ширину под три карточки. */
+#scrLevel .panel,#scrClass .panel{width:min(1000px,100%)}
 #scrClass .card .role{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
   color:var(--muted)}
 #scrClass .card.sel{border-color:var(--cyan);box-shadow:0 0 26px rgba(62,232,255,.2)}
@@ -230,22 +281,37 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .remember input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 
 /* shop */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:10px;margin-top:16px;
-  max-height:56vh;overflow-y:auto;padding-right:6px}
-.up{background:var(--panel-2);border:1px solid var(--line);padding:13px 14px;display:flex;
-  flex-direction:column;gap:7px;text-align:left;cursor:pointer;align-items:stretch}
-.up:hover:not(:disabled){border-color:var(--gold);background:#1b2440}
-.up .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.up .nm{font-family:var(--display);font-size:13px;letter-spacing:1px;text-transform:uppercase}
-.up .cost{font-family:var(--mono);font-size:12px;color:var(--gold);white-space:nowrap}
-.up .d{font-size:12px;color:var(--muted);line-height:1.45;font-family:var(--body);text-transform:none;
-  letter-spacing:0}
-.up .pips{display:flex;gap:3px}
-.up .pips i{height:4px;flex:1;background:var(--line)}
-.up .pips i.f{background:var(--gold)}
-.up.max{opacity:.55}
-.up.max .cost{color:var(--muted)}
-.up:disabled{opacity:.45}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(296px,1fr));gap:12px;margin-top:18px;
+  max-height:58vh;overflow-y:auto;padding-right:8px}
+.up{background:linear-gradient(170deg,var(--panel-2),#0b101d);border:1px solid var(--line);
+  padding:17px 18px 15px;display:flex;flex-direction:column;gap:10px;text-align:left;
+  cursor:pointer;align-items:stretch;position:relative;
+  transition:transform .13s,border-color .13s,box-shadow .13s,background .13s}
+.up:hover:not(:disabled){border-color:var(--gold);transform:translateY(-3px);
+  background:linear-gradient(170deg,#23202c,#14131f);box-shadow:0 12px 34px -18px var(--gold)}
+.up .h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.up .nm{font-family:var(--display);font-size:16.5px;letter-spacing:1.4px;text-transform:uppercase;
+  line-height:1.1}
+.up .cost{font-family:var(--mono);font-size:13px;color:var(--gold);white-space:nowrap}
+.up .d{font-size:13.5px;color:var(--muted);line-height:1.5;font-family:var(--body);
+  text-transform:none;letter-spacing:0;flex:1}
+/* уровень: полоски + подпись «3 / 5», иначе приходится считать глазами */
+.up .lv{display:flex;align-items:center;gap:10px}
+.up .pips{display:flex;gap:4px;flex:1}
+.up .pips i{height:6px;flex:1;background:#1a2237;border:1px solid transparent}
+.up .pips i.f{background:linear-gradient(180deg,#ffe08a,#e39a12);border-color:#7a5a12;
+  box-shadow:0 0 9px -2px var(--gold)}
+.up .lvn{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;
+  font-variant-numeric:tabular-nums;flex:none}
+.up.max{border-color:#3a4a2a}
+.up.max .cost{color:var(--lime);letter-spacing:2px;font-size:11px}
+.up.max .lvn{color:var(--lime)}
+.up:disabled{cursor:not-allowed}
+.up:disabled:not(.max){opacity:.5}
+/* не хватает осколков — подсвечиваем именно цену, а не гасим всю карточку */
+.up.poor{opacity:1;border-color:#2a3145}
+.up.poor .nm,.up.poor .d{opacity:.55}
+.up.poor .cost{color:#7a6a3d}
 
 /* characters */
 .chars{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px}
@@ -256,7 +322,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .chr .nm{font-family:var(--display);font-size:17px;letter-spacing:1px;text-transform:uppercase}
 .chr .d{font-size:12px;color:var(--muted);line-height:1.5;font-family:var(--body);
   text-transform:none;letter-spacing:0}
-.chr .lock{font-family:var(--mono);font-size:11px;color:var(--gold)}
+.chr .lock{font-family:var(--mono);font-size:11.5px;color:var(--gold);display:flex;
+  align-items:center;gap:6px;letter-spacing:.5px}
 .chr .tag{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan)}
 
 /* results */
@@ -467,20 +534,29 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .arena.lock:after{content:"ЗАКРЫТО";position:absolute;right:14px;top:13px;font-family:var(--mono);
   font-size:9px;letter-spacing:2px;color:var(--muted)}
 
-.achgrid{margin-top:16px;max-height:58vh;overflow-y:auto;overflow-x:hidden;padding-right:6px;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(318px,1fr));gap:8px;align-content:start}
-.achit{display:flex;align-items:center;gap:11px;padding:10px 12px;background:var(--panel-2);
-  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);min-height:56px}
-.achit .ico{width:26px;height:26px;flex:none}
-.achit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.achit .nm{font-family:var(--display);font-size:13.5px;letter-spacing:.6px;text-transform:uppercase;
-  color:var(--ink)}
-.achit .sub{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.35}
+.achbar{height:6px;background:#0a0f1c;border:1px solid var(--line);margin:2px 0 16px;position:relative}
+.achbar i{position:absolute;inset:0;right:auto;background:linear-gradient(90deg,#8fa3c8,var(--gold));
+  transition:width .3s ease;box-shadow:0 0 14px -3px var(--gold)}
+.achgrid{margin-top:16px;max-height:56vh;overflow-y:auto;overflow-x:hidden;padding-right:8px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;align-content:start}
+.achit{display:flex;align-items:center;gap:14px;padding:14px 16px;position:relative;
+  background:linear-gradient(170deg,var(--panel-2),#0b101d);
+  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);min-height:68px}
+.achit .ico{width:32px;height:32px;flex:none}
+.achit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.achit .nm{font-family:var(--display);font-size:16px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--ink);line-height:1.1}
+.achit .sub{font-size:12.5px;color:var(--muted);line-height:1.4;font-family:var(--body)}
 .achit .rr{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--rar,#8fa3c8);flex:none;align-self:flex-start}
-.achit.got{background:#16203a;box-shadow:inset 0 0 22px -12px var(--rar,#8fa3c8)}
-.achit.locked{opacity:.44}
+  color:var(--rar,#8fa3c8);flex:none;align-self:flex-start;opacity:.85}
+.achit.got{background:linear-gradient(170deg,#1a2440,#0d1424);
+  box-shadow:inset 0 0 34px -16px var(--rar,#8fa3c8)}
+/* галочка в углу: сразу видно, что собрано, даже без фильтра */
+.achit.got:after{content:"✓";position:absolute;right:14px;bottom:10px;font-size:13px;
+  color:var(--rar,#8fa3c8);opacity:.8}
+.achit.locked{opacity:.5}
 .achit.locked .nm{color:var(--muted)}
+.achit.locked .ico{opacity:.7}
 
 /* номер круга в бесконечности — приклеен к часам, чтобы не искать глазами */
 .clockrow{display:flex;align-items:baseline;gap:9px}
@@ -508,14 +584,67 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 /* --- фильтры на экране достижений --- */
 .filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
 .filters .sep{width:1px;height:18px;background:var(--line);margin:0 5px}
-.filters button{padding:5px 11px;background:#0b1020;border:1px solid var(--line);color:var(--muted);
-  font:inherit;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+.filters button{padding:7px 14px;background:#0b1020;border:1px solid var(--line);color:var(--muted);
+  font:inherit;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
   cursor:pointer;line-height:1.4}
 .filters button:hover{color:var(--ink);border-color:var(--rr,#3ee8ff)}
 .filters button.on{color:var(--rr,#3ee8ff);border-color:var(--rr,#3ee8ff);background:#12203a}
 .filters button i{font-style:normal;opacity:.6;margin-left:5px}
 .achgrid .none{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--muted);
   padding:22px 4px;text-align:center}
+
+/* --- главное меню: слева вход, справа досье по сохранению --- */
+.menupanel{width:min(1040px,100%);display:grid;grid-template-columns:1.15fr .85fr;gap:34px;
+  align-items:start}
+.menupanel h1{font-size:clamp(40px,6.4vw,74px)}
+.menupanel .menu{margin-top:24px;max-width:none}
+.dossier{border-left:1px solid var(--line);padding-left:26px;min-width:0}
+.dossier .eyebrow{margin-bottom:12px}
+.balance{display:flex;flex-direction:column;gap:5px;padding:14px 16px;
+  background:linear-gradient(140deg,#1a1508,#0d1220 60%);border:1px solid #47391a;
+  box-shadow:inset 0 0 30px -18px var(--gold)}
+.balance .bl{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted)}
+.dstats{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:14px;background:var(--line)}
+.dstats div{background:#0c1220;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.dstats span{font-family:var(--mono);font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--muted)}
+.dstats b{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.darenas{display:flex;flex-direction:column;gap:5px}
+.darenas div{display:flex;align-items:center;gap:9px;padding:7px 10px;background:#0c1220;
+  border:1px solid var(--line);border-left:3px solid var(--ac);font-family:var(--mono);font-size:11px}
+.darenas .an{flex:1;color:var(--ink);letter-spacing:.3px}
+.darenas .as{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.darenas div.done .as{color:var(--lime)}
+.darenas div.lock{opacity:.45}
+.darenas .mk{font-size:10px;color:var(--ac);letter-spacing:1px}
+@media (max-width:860px){
+  .menupanel{grid-template-columns:1fr;gap:24px}
+  .dossier{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:20px}
+}
+
+/* осколки в HUD — золотом, как и везде */
+.stats .sgold b{color:var(--gold)}
+
+/* --- достижения, полученные за забег: блок на экране итогов --- */
+.endach{display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.endach.on{display:block}
+.endach .eh{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px}
+.endach .er{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}
+.endach .ea{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#0f1628;
+  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);
+  animation:eaPop .3s backwards}
+.endach .ea:nth-child(2){animation-delay:.07s}
+.endach .ea:nth-child(3){animation-delay:.14s}
+.endach .ea:nth-child(n+4){animation-delay:.2s}
+@keyframes eaPop{from{opacity:0;transform:translateY(8px)}}
+.endach .ea .ico{width:22px;height:22px;flex:none}
+.endach .ea .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.endach .ea .n{font-family:var(--display);font-size:12.5px;letter-spacing:.8px;text-transform:uppercase}
+.endach .ea .r{font-family:var(--mono);font-size:8.5px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--rar,#8fa3c8)}
 </style>
 
 <canvas id="cv"></canvas>
@@ -530,7 +659,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
       <div class="timeline" id="timeline"><i class="tfill" id="tlFill"></i></div>
       <div class="stats">
         <span>УБИЙСТВ <b id="sKills">0</b></span>
-        <span>ОСКОЛКИ <b id="sGold">0</b></span>
+        <span class="sgold">ОСКОЛКИ <b id="sGold">0</b></span>
         <span>ВОЛНА <b id="sWave">1</b></span>
         <span id="chestStat">СУНДУК <b id="sChest">45 с</b></span>
         <span id="rushStat" hidden style="color:var(--lime)">РАЗГОН <b id="sRush">+0%</b></span>
@@ -545,7 +674,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="xprail">
     <span class="lvl" id="lvlTxt">1</span>
     <div class="xptrack"><i id="xpFill"></i></div>
-    <span class="xpnum" id="xpNum">0 / 14</span>
+    <span class="xpnum"><b id="xpNum">0</b><i id="xpMax">/ 14</i></span>
   </div>
   <div class="bossbar" id="bossBar">
     <div class="name" id="bossName">НАДЗИРАТЕЛЬ</div>
@@ -571,21 +700,32 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 <div id="dash"><span>РЫВОК</span><span class="key" id="dashKey">SPACE</span></div>
 
 <div class="screen on" id="scrMenu">
-  <div class="panel">
-    <p class="eyebrow">Забег начинается в полночь</p>
-    <h1>Night<br><em>survivors</em></h1>
-    <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
-      что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться
-      пятнадцать минут.</p>
-    <div class="menu">
-      <button class="primary" id="bPlay">Начать забег <span class="k">ENTER</span></button>
-      <button id="bShop">Мастерская <span class="k" id="kShards">0 ◈</span></button>
-      <button id="bChars">Операторы</button>
-      <button id="bCollection">Коллекция <span class="k" id="kCol">0 / 0</span></button>
-      <button id="bAch">Достижения <span class="k" id="kAch">0 / 0</span></button>
-      <button id="bHelp">Управление</button>
+  <div class="panel menupanel">
+    <div class="mleft">
+      <p class="eyebrow">Забег начинается в полночь</p>
+      <h1>Night<br><em>survivors</em></h1>
+      <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
+        что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться
+        пятнадцать минут.</p>
+      <div class="menu">
+        <button class="primary" id="bPlay">Начать забег <span class="k">ENTER</span></button>
+        <button id="bShop">Мастерская <span class="k" id="kShards"></span></button>
+        <button id="bChars">Операторы <span class="k" id="kChar">—</span></button>
+        <button id="bCollection">Коллекция <span class="k" id="kCol">0 / 0</span></button>
+        <button id="bAch">Достижения <span class="k" id="kAch">0 / 0</span></button>
+        <button id="bHelp">Управление</button>
+      </div>
     </div>
-    <p class="hint">Лучший результат: <span id="bestTxt">—</span></p>
+    <!-- правая колонка: сводка по сохранению, чтобы меню не было пустым -->
+    <aside class="dossier">
+      <p class="eyebrow">Досье оператора</p>
+      <div class="balance"><span class="bl">Осколков в банке</span>
+        <span class="bv" id="mShards"></span></div>
+      <div class="dstats" id="mStats"></div>
+      <p class="eyebrow" style="margin:18px 0 8px">Арены</p>
+      <div class="darenas" id="mArenas"></div>
+      <p class="hint" id="bestTxt">—</p>
+    </aside>
   </div>
 </div>
 
@@ -618,16 +758,16 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <p class="lede">По кварталу разбросаны <span style="color:var(--gold)">неонки</span> — ломай их любым
       уроном по площади. Внутри бывает аптечка или <span style="color:var(--cyan)">магнит</span>, который
       разом стягивает к тебе весь опыт и все аптечки с карты.</p>
-    <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки ◈</span> — их тратят
+    <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки</span> — их тратят
       в мастерской на постоянные улучшения. Они не сгорают при смерти, так что каждый забег двигает тебя дальше.</p>
     <div class="row"><button id="bHelpBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
 
 <div class="screen" id="scrShop">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow">Постоянные улучшения</p>
-    <h2>Мастерская <span class="shards" id="shopShards">0 ◈</span></h2>
+    <h2>Мастерская <span class="shards" id="shopShards"></span></h2>
     <div class="grid" id="shopGrid"></div>
     <div class="row">
       <button id="bShopBack">Назад <span class="k">ESC</span></button>
@@ -658,6 +798,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="panel wide">
     <p class="eyebrow">Что уже сделано</p>
     <h2>Достижения <span class="shards" id="achCount">0 / 0</span></h2>
+    <div class="achbar"><i id="achBarFill" style="width:0%"></i></div>
     <div class="filters" id="achFilters"></div>
     <div class="achgrid" id="achGrid"></div>
     <div class="row"><button id="bAchBack">Назад <span class="k">ESC</span></button></div>
@@ -665,16 +806,16 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 </div>
 
 <div class="screen" id="scrChars">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow">Кто выходит на забег</p>
-    <h2>Операторы <span class="shards" id="charShards">0 ◈</span></h2>
+    <h2>Операторы <span class="shards" id="charShards"></span></h2>
     <div class="chars" id="charGrid"></div>
     <div class="row"><button id="bCharBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
 
 <div class="screen" id="scrClass">
-  <div class="panel">
+  <div class="panel wide">
     <p class="eyebrow" style="text-align:center">Способность на забег — выбери одну</p>
     <div class="cards" id="classRow"></div>
     <p class="hint" style="text-align:center">Бьёт по <kbd>ЛКМ</kbd> в сторону курсора · <kbd>ESC</kbd> назад</p>
@@ -712,6 +853,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <p class="eyebrow" id="endEyebrow">Забег окончен</p>
     <h1 style="font-size:clamp(30px,5vw,52px)" id="endTitle">Тебя погасили</h1>
     <div class="tbl" id="endTbl"></div>
+    <div class="endach" id="endAch"></div>
     <div class="break" id="endBreak"></div>
     <div class="row">
       <button class="primary" id="bAgain">Ещё раз <span class="k">ENTER</span></button>
@@ -748,6 +890,21 @@ const fmtTime = s => {
   return String((s / 60) | 0).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 };
 const $ = id => document.getElementById(id);
+
+/* Крупные числа разделяем тонким пробелом: обычный неразрывный из
+   toLocaleString в моноширинном шрифте выглядит дырой. */
+const fmtNum = n => Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ");
+
+/* Фирменный осколок вместо знака «◈»: тот терялся среди цифр и выглядел
+   как опечатка. Цвет наследуется через currentColor, поэтому одна и та же
+   разметка годится и для золотого баланса, и для приглушённой цены. */
+const SHARD = '<svg class="shd" viewBox="0 0 16 20" fill="none" aria-hidden="true">' +
+  '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" fill="currentColor" opacity=".16"/>' +
+  '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+  '<path d="M8 .8v18.4M.8 6l7.2 4 7.2-4" stroke="currentColor" stroke-width=".9" opacity=".5"/></svg>';
+/* цена/баланс одним куском: иконка + число с разделителями */
+const cur = (n, cls) => '<span class="cur' + (cls ? " " + cls : "") + '">' +
+  SHARD + '<b>' + fmtNum(n) + '</b></span>';
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; }
   return a;
@@ -880,6 +1037,8 @@ const Sfx = {
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
   ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
+  /* крит: короткий яркий щелчок поверх обычного попадания */
+  crit() { this.blip(1760, 0.06, "square", 0.045, 520); },
   cycle() {
     this.seq([0, 1, 2], 150, n => this.blip(220 / Math.pow(1.22, n), 0.6, "sawtooth", 0.14, -30));
     this.noise(1.1, 0.16, 300);
@@ -1734,6 +1893,8 @@ const META = [
   { id: "growth", name: "Нейролинк", max: 5, cost: l => [60, 130, 240, 400, 620][l], d: l => "+" + (l * 4) + "% опыта за забег" },
   { id: "echo", name: "Эхо", max: 2, cost: l => [1200, 2200][l], d: l => "+" + l + (l === 1 ? " снаряд" : " снаряда") + " всему оружию со снарядами" },
   { id: "cool", name: "Турбина", max: 3, cost: l => [150, 320, 560][l], d: l => "−" + Math.round((1 - Math.pow(0.92, l)) * 100) + "% отката всему оружию и навыку" },
+  { id: "siege", name: "Сапёр", max: 4, cost: l => [70, 150, 270, 440][l], d: l => "+" + (l * 5) + "% урона по боссам" },
+  { id: "crit", name: "Пробой", max: 4, cost: l => [100, 210, 380, 640][l], d: l => l * 5 + "% шанс пробить броню: двойной урон" },
   { id: "curse", name: "Проклятие", max: 4, cost: l => [90, 180, 330, 560][l], d: l => "Враги на " + (l * 12) + "% злее, но осколков на " + (l * 25) + "% больше" }
 ];
 
@@ -1846,6 +2007,8 @@ const DIM_TIME = 0.22;        // «пусто»: иконка коротко т�
 const DIM_GAP = 0.5;          // и не мигает чаще этого, пока держишь кнопку
 const REFUND_PER_KILL = 0.035; // столько заряда возвращает одно убийство навыком
 const REFUND_SHARE = 0.45;     // но суммарно не больше 45% заряда за каст
+const PICK_BOOST = 1;         // столько держится расширенный сбор после рывка
+const PICK_BOOST_MUL = 0.9;   // …и настолько он шире обычного в первый момент
 const MAX_ENEMIES = 340;      // потолок толпы: выше начинает проседать кадр
 const MAX_WEAPONS = 4;
 const MAX_PASSIVES = 6;
@@ -1858,7 +2021,7 @@ const g = {
   parts: [], nums: [], slashes: [], zaps: [], beams: [], wells: [], props: [], pools: [], discs: [],
   grid: new Grid(56), pgrid: new Grid(96), propT: 0,
   cam: { x: 0, y: 0 }, shake: 0,
-  kills: 0, gold: 0, bonus: 0, bossIdx: 0, boss: null,
+  kills: 0, gold: 0, bonus: 0, bossIdx: 0, boss: null, crits: 0,
   spawnAcc: 0, pendingUps: 0, won: false, damageDealt: 0,
   chestT: 0, chests: 0, reaper: false, autoPick: null,
   /* кто именно наносит урон прямо сейчас — источник пишется в статистику */
@@ -1870,7 +2033,7 @@ const g = {
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
   endless: false, hyper: false, cycle: 0,
-  runQuests: 0, firstHit: -1, achT: 0
+  runQuests: 0, firstHit: -1, achT: 0, runAch: []
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -1883,7 +2046,7 @@ function makePlayer(charId) {
     x: 0, y: 0, vx: 0, vy: 0, r: 11, face: -Math.PI / 2,
     level: 1, xp: 0, xpNext: 14,
     weapons: [], passives: {},
-    dashT: 0, dashCd: 0, inv: 0, hitFlash: 0,
+    dashT: 0, dashCd: 0, pickT: 0, inv: 0, hitFlash: 0,
     ability: ABILITIES[save.ability] ? save.ability : "phantom",
     abCharge: 1, abLvl: 1, abRefund: 0, abGap: 0,  // заряды копятся, первый выдаём сразу
     chargeSeen: 1, dashSeen: false,                // для отлова момента готовности
@@ -1915,6 +2078,8 @@ function recalc(p) {
   p.areaMul = 1 + L("area") * 0.12;
   p.speed = 196 * (1 + L("boots") * 0.09) * (1 + metaLvl("spd") * 0.04) * (m.spd || 1);
   p.pickR = 78 * (1 + L("magnet") * 0.3) * (1 + metaLvl("mag") * 0.18);
+  p.bossMul = 1 + metaLvl("siege") * 0.05;     // «Сапёр»: прибавка только по боссам
+  p.crit = metaLvl("crit") * 0.05;             // «Пробой»: шанс на двойной урон
   p.armor = L("armor") * 2 + metaLvl("armor");
   p.regen = metaLvl("regen") * 0.3;
   p.greedMul = (1 + L("greed") * 0.18) * (1 + metaLvl("greed") * 0.1) * (m.greed || 1)
@@ -1960,6 +2125,26 @@ function setArena(i) {
   g.bosses.sort((a, b) => a.t - b.t);
 }
 
+/* Музыка слушается модификаторов: гипер гонит темп и делает бас злее,
+   каждый круг поднимает тональность на полтона. Настройки кэшируются —
+   объект пересобирается только когда что-то из этого меняется. */
+let _mcKey = "", _mc = null;
+function musicCfg() {
+  const base = g.arenaDef && g.arenaDef.music;
+  if (!base) return null;
+  const key = g.arena + "|" + (g.hyper ? 1 : 0) + "|" + g.cycle;
+  if (key === _mcKey) return _mc;
+  _mcKey = key;
+  _mc = Object.assign({}, base);
+  if (g.hyper) { _mc.beat = base.beat * 0.84; _mc.wave = "sawtooth"; }
+  _mc.root = base.root * Math.pow(2, Math.min(6, g.cycle) / 12);
+  return _mc;
+}
+/* плотность аранжировки: к концу забега и под модификаторами она выше */
+function musicPush() {
+  return clamp(g.time / RUN_LEN + (g.hyper ? 0.3 : 0) + g.cycle * 0.25, 0, 1);
+}
+
 /* сколько осталось до следующего сундука — для счётчика в HUD */
 function chestLeft() {
   if (g.time < CHEST_FIRST) return CHEST_FIRST - g.time;
@@ -1969,7 +2154,7 @@ function chestGoldNext() { return (g.chests + 1) % CHEST_GOLD_EVERY === 0; }
 
 function startRun() {
   g.state = "play";
-  g.time = 0; g.kills = 0; g.gold = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
+  g.time = 0; g.kills = 0; g.gold = 0; g.crits = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
   g.spawnAcc = 0; g.pendingUps = 0; g.won = false; g.shake = 0; g.damageDealt = 0;
   g.chestT = 0; g.chests = 0; g.reaper = false; g.autoPick = null;
   g.stats = {}; g.dmgSource = null; g.dmgName = "";
@@ -1978,7 +2163,7 @@ function startRun() {
   g.rerolls = metaLvl("reroll"); g.unlockT = 0;
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
-  g.runQuests = 0; g.firstHit = -1; g.achT = 0;
+  g.runQuests = 0; g.firstHit = -1; g.achT = 0; g.runAch.length = 0;
   g.endless = false; g.hyper = false; g.cycle = 0;
   setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
@@ -2032,14 +2217,23 @@ function statOf(id, name) {
   return st;
 }
 
+/* Вся боевая математика сходится сюда, поэтому «Сапёр» и «Пробой» считаются
+   в одном месте — и работают для любого оружия, навыка и мины разом. */
 function damageEnemy(e, dmg, dirX, dirY, kb, color) {
   if (e.dead) return;
+  const pl = g.p;
+  let crit = false;
+  if (pl) {
+    if (e.boss && pl.bossMul > 1) dmg *= pl.bossMul;
+    if (pl.crit > 0 && Math.random() < pl.crit) { dmg *= 2; crit = true; }
+  }
   if (g.dmgSource) statOf(g.dmgSource, g.dmgName).dmg += Math.min(dmg, e.hp);  // без оверкилла
   e.hp -= dmg;
   g.damageDealt += dmg;
-  e.flash = 0.09;
+  e.flash = crit ? 0.16 : 0.09;
   if (kb && !e.boss) { e.kx += dirX * kb; e.ky += dirY * kb; }
-  pushNum(e.x, e.y - e.r, Math.round(dmg), color || "#fff");
+  pushNum(e.x, e.y - e.r, Math.round(dmg), crit ? "#ffc23d" : (color || "#fff"), crit);
+  if (crit) { g.crits++; Sfx.crit(); }
   if (e.hp <= 0) killEnemy(e); else if (Math.random() < 0.35) Sfx.hit();
 }
 
@@ -2308,9 +2502,9 @@ function burst(x, y, color, n, sp) {
     });
   }
 }
-function pushNum(x, y, v, color) {
+function pushNum(x, y, v, color, crit) {
   if (g.nums.length > 90) g.nums.shift();
-  g.nums.push({ x: x + rnd(-7, 7), y: y, v: v, life: 0.7, color: color });
+  g.nums.push({ x: x + rnd(-7, 7), y: y, v: v, life: crit ? 0.95 : 0.7, color: color, crit: !!crit });
 }
 
 /* ---------- боссы: поведение ------------------------------------------ */
@@ -2816,7 +3010,7 @@ function questProgress(kind, key, amount) {
       g.runQuests++;
       g.questBonus += q.reward;
       g.gold += q.reward;
-      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ◈");
+      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ОСКОЛКОВ");
       Sfx.ultReady();
       if (UI.flashQuest) UI.flashQuest();
     }
@@ -2916,6 +3110,7 @@ function checkAch() {
     if (!ok) continue;
     save.ach.push(a.id);
     got++;
+    if (g.runAch.indexOf(a.id) < 0) g.runAch.push(a.id);
     UI.achPop(a);
   }
   if (got) writeSave();
@@ -2953,7 +3148,7 @@ function endRun(won) {
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
     bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul,
-    cycle: g.cycle, mods: modGreed()
+    cycle: g.cycle, mods: modGreed(), crits: g.crits, ach: g.runAch.slice()
   });
 }
 
@@ -2965,6 +3160,7 @@ function update(dt) {
 
   /* --- игрок --- */
   const ax = axis();
+  if (p.pickT > 0) p.pickT -= dt;       // «шлейф» расширенного сбора после рывка
   if (p.dashT > 0) {
     p.dashT -= dt;
     p.x += p.dvx * dt; p.y += p.dvy * dt;
@@ -2985,6 +3181,7 @@ function update(dt) {
     if (p.dashCd > 0) p.dashCd -= dt;
     if ((tookKey(" ") || tookKey("shift")) && p.dashCd <= 0) {
       p.dashT = 0.17; p.dashCd = p.dashCdMax;
+      p.pickT = PICK_BOOST;             // радиус сбора расширен и плавно сходит на нет
       const a = (p.vx || p.vy) ? Math.atan2(p.vy, p.vx) : p.face;
       p.dvx = Math.cos(a) * 1180; p.dvy = Math.sin(a) * 1180;
       Sfx.dash();
@@ -3299,7 +3496,9 @@ function update(dt) {
   }
 
   /* --- кристаллы опыта --- */
-  const pr = p.pickR, pr2 = pr * pr;
+  /* после рывка радиус сбора расширен и за секунду возвращается к обычному */
+  const pr = p.pickR * (1 + PICK_BOOST_MUL * Math.max(0, p.pickT) / PICK_BOOST);
+  const pr2 = pr * pr;
   for (let i = 0; i < g.gems.length; i++) {
     const q = g.gems[i];
     q.t += dt;
@@ -3864,15 +4063,22 @@ function render() {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
 
-  /* цифры урона */
-  ctx.font = "600 13px 'IBM Plex Mono',monospace";
+  /* цифры урона: криты крупнее, с обводкой и коротким подскоком */
   ctx.textAlign = "center";
   for (let i = 0; i < g.nums.length; i++) {
     const n = g.nums[i];
     if (!vis(n)) continue;
-    ctx.globalAlpha = clamp(n.life / 0.7, 0, 1);
+    const crit = n.crit;
+    ctx.globalAlpha = clamp(n.life / (crit ? 0.95 : 0.7), 0, 1);
+    ctx.font = crit ? "700 19px 'Chakra Petch',sans-serif" : "600 13px 'IBM Plex Mono',monospace";
+    const y = crit ? n.y - (0.95 - n.life) * 16 : n.y;
+    if (crit) {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(8,10,18,.85)";
+      ctx.strokeText(n.v, n.x, y);
+    }
     ctx.fillStyle = n.color;
-    ctx.fillText(n.v, n.x, n.y);
+    ctx.fillText(n.v, n.x, y);
   }
   ctx.globalAlpha = 1;
   ctx.textAlign = "left";
@@ -3937,6 +4143,7 @@ const UI = {
     $("quests").classList.add("on");
     this.syncSkill();
     this.syncRack();
+    this._lvlSeen = null;
     this.buildQuests();
     this.buildTimeline();
   },
@@ -3967,8 +4174,8 @@ const UI = {
     const p = g.p;
     if (!p) return;
     $("clock").textContent = fmtTime(g.time);
-    $("sKills").textContent = g.kills;
-    $("sGold").textContent = g.gold;
+    $("sKills").textContent = fmtNum(g.kills);
+    $("sGold").textContent = fmtNum(g.gold);
     $("sWave").textContent = Math.floor(g.time / 60) + 1;
     /* до следующего сундука: золотой подсвечиваем заранее, чтобы было за чем бежать */
     const cl = chestLeft();
@@ -3985,9 +4192,21 @@ const UI = {
     const vial = $("hpVial");
     vial.classList.toggle("mid", hk < 0.5);
     vial.classList.toggle("low", hk < 0.25);
-    $("lvlTxt").textContent = p.level;
+    /* плашку уровня трогаем только когда уровень реально сменился,
+       иначе вспышка перезапускалась бы каждый кадр */
+    if (p.level !== this._lvlSeen) {
+      const el = $("lvlTxt");
+      el.textContent = p.level;
+      $("xpMax").textContent = "/ " + p.xpNext;
+      if (this._lvlSeen != null) {
+        el.classList.remove("up");
+        void el.offsetWidth;
+        el.classList.add("up");
+      }
+      this._lvlSeen = p.level;
+    }
     $("xpFill").style.transform = "scaleX(" + clamp(p.xp / p.xpNext, 0, 1) + ")";
-    $("xpNum").textContent = Math.floor(p.xp) + " / " + p.xpNext;
+    $("xpNum").textContent = Math.floor(p.xp);
     const bb = $("bossBar");
     if (g.boss && !g.boss.dead) {
       bb.classList.add("on");
@@ -4155,7 +4374,7 @@ const UI = {
       '<div class="qi-card" style="border-left-color:' + q.color + '">' + q.icon +
       '<span class="qi-t"><span class="qi-l">' + q.label + "</span>" +
       '<span class="qi-n">' + q.name + (q.kind === "kill" ? " ×" + q.goal : "") + "</span>" +
-      '<span class="qi-r">+' + q.reward + " ◈</span></span></div>").join("");
+      '<span class="qi-r">+' + cur(q.reward) + "</span></span></div>").join("");
     const el = $("questIntro");
     el.classList.remove("on");
     void el.offsetWidth;                       // перезапуск анимации
@@ -4286,6 +4505,7 @@ const UI = {
       if (f.st === "left" && got) return false;
       return f.rar < 0 || a.rar === f.rar;
     });
+    $("achBarFill").style.width = (save.ach.length / ACHIEVEMENTS.length * 100).toFixed(1) + "%";
     if (!list.length) {
       grid.innerHTML = '<div class="none">Под этот фильтр ничего не подходит.</div>';
       $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
@@ -4301,6 +4521,7 @@ const UI = {
         '<span class="rr">' + r.name + "</span></div>";
     }).join("");
     $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
+    $("achBarFill").style.width = (save.ach.length / ACHIEVEMENTS.length * 100).toFixed(1) + "%";
   },
 
   /* всплывашка в углу: по одной за раз, очередь не глотается */
@@ -4424,24 +4645,41 @@ const UI = {
     $("endTitle").textContent = won ? "Ты дожил до рассвета" : "Ты проиграл";
     const rows = [
       ["Продержался", fmtTime(s.time)],
-      ["Убито", s.kills],
+      ["Убито", fmtNum(s.kills)],
       ["Уровень", s.level],
-      ["Собрано осколков", s.gold],
-      ["Премия за боссов", s.bonus],
-      ["Премия за задания", s.quests],
+      ["Собрано осколков", fmtNum(s.gold)],
+      ["Премия за боссов", fmtNum(s.bonus)],
+      ["Премия за задания", fmtNum(s.quests)],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
     if (s.cycle > 0) rows.splice(1, 0, ["Кругов пройдено", s.cycle]);
     if (s.mods > 1.001) rows.push(["Модификаторы арены", "×" + s.mods.toFixed(2)]);
+    if (s.crits) rows.splice(3, 0, ["Пробоев брони", fmtNum(s.crits)]);
     if (won) rows.push(["Бонус за победу", "×1.50"]);
     let h = "";
     for (const r of rows) h += '<div class="l">' + r[0] + '</div><div class="v">' + r[1] + "</div>";
     h += "<hr>";
-    h += '<div class="l tot">Итого осколков</div><div class="v tot">+' + s.total + " ◈</div>";
+    h += '<div class="l tot">Итого осколков</div><div class="v tot">+' + cur(s.total) + "</div>";
     $("endTbl").innerHTML = h;
+    this.buildRunAch(s.ach);
     this.buildBreakdown();
     this.show("end");
     this.syncShards();
+  },
+
+  /* что открылось именно за этот забег: всплывашки в бою легко пропустить */
+  buildRunAch(ids) {
+    const box = $("endAch");
+    const list = (ids || []).map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
+    box.classList.toggle("on", list.length > 0);
+    if (!list.length) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="eh">Достижений за забег: ' + list.length + "</div>" +
+      '<div class="er">' + list.map(a => {
+        const r = ACH_RARITY[a.rar];
+        return '<div class="ea" style="--rar:' + r.color + '">' + svg(ICONS[a.ico], r.color) +
+          '<span class="t"><span class="r">' + r.name + "</span>" +
+          '<span class="n">' + a.name + "</span></span></div>";
+      }).join("") + "</div>";
   },
 
   /* разбор забега: сколько урона и убийств принесло каждое оружие */
@@ -4461,7 +4699,7 @@ const UI = {
       const pct = r.dmg / total * 100;
       h += '<div class="brow' + (r.ab ? " ab" : "") + '">' +
         '<span class="bn">' + r.name + "</span>" +
-        '<span class="bv">' + Math.round(r.dmg).toLocaleString("ru-RU") + "</span>" +
+        '<span class="bv">' + fmtNum(r.dmg) + "</span>" +
         '<span class="bp"><i style="width:' + pct.toFixed(1) + '%"></i><em>' + pct.toFixed(1) + "%</em></span>" +
         '<span class="bv">' + r.kills + "</span></div>";
     }
@@ -4470,13 +4708,43 @@ const UI = {
 
   syncShards() {
     this.syncColCount();
-    $("kShards").textContent = save.shards + " ◈";
-    $("shopShards").textContent = save.shards + " ◈";
-    $("charShards").textContent = save.shards + " ◈";
+    $("kShards").innerHTML = cur(save.shards);
+    $("shopShards").innerHTML = cur(save.shards);
+    $("charShards").innerHTML = cur(save.shards);
     $("kAch").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
-    $("bestTxt").textContent = save.best
-      ? fmtTime(save.best) + " · " + save.bestKills + " убийств" + (save.wins ? " · забегов закрыто: " + save.wins : "")
-      : "ни одного забега";
+    const ch = CHARS.find(c => c.id === save.char);
+    $("kChar").textContent = ch ? ch.name : "—";
+    this.buildDossier();
+  },
+
+  /* Досье: то же сохранение, но в лицо — иначе главное меню было просто
+     столбиком кнопок, а цифры прятались по вложенным экранам. */
+  buildDossier() {
+    $("mShards").innerHTML = cur(save.shards, "big");
+    const t = save.total;
+    const rows = [
+      ["Забегов", fmtNum(save.runs)],
+      ["Закрыто", fmtNum(save.wins)],
+      ["Лучшее время", save.best ? fmtTime(save.best) : "—"],
+      ["Макс. уровень", fmtNum(save.bestLevel || 0)],
+      ["Убийств всего", fmtNum(t.kills)],
+      ["Боссов", fmtNum(t.bosses)]
+    ];
+    $("mStats").innerHTML = rows.map(r =>
+      "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
+    $("mArenas").innerHTML = ARENAS.map((ar, i) => {
+      const open = arenaUnlocked(i), done = save.arenaDone.indexOf(ar.id) >= 0;
+      const m = arenaMods(ar.id);
+      const marks = done ? ARENA_MODS.filter(x => m[x.id]).map(x => x.short).join(" ") : "";
+      return '<div class="' + (done ? "done" : open ? "" : "lock") + '" style="--ac:' + ar.accent + '">' +
+        '<span class="an">' + ar.name + "</span>" +
+        (marks ? '<span class="mk">' + marks + "</span>" : "") +
+        '<span class="as">' + (done ? "пройдена" : open ? "открыта" : "закрыта") + "</span></div>";
+    }).join("");
+    $("bestTxt").textContent = save.beaten
+      ? "Игра пройдена. Первоисточник уничтожен."
+      : save.best ? "Лучший результат: " + fmtTime(save.best) + " · " + fmtNum(save.bestKills) + " убийств"
+        : "Ни одного забега — самое время начать.";
   },
 
   buildShop() {
@@ -4486,13 +4754,15 @@ const UI = {
       const lvl = metaLvl(u.id);
       const max = lvl >= u.max;
       const cost = max ? 0 : u.cost(lvl);
+      const poor = !max && save.shards < cost;
       const el = document.createElement("button");
-      el.className = "up" + (max ? " max" : "");
-      el.disabled = max || save.shards < cost;
+      el.className = "up" + (max ? " max" : "") + (poor ? " poor" : "");
+      el.disabled = max || poor;
       el.innerHTML = '<div class="h"><span class="nm">' + u.name + "</span>" +
-        '<span class="cost">' + (max ? "МАКС" : cost + " ◈") + "</span></div>" +
+        '<span class="cost">' + (max ? "МАКС" : cur(cost, poor ? "mute" : "")) + "</span></div>" +
         '<div class="d">' + u.d(Math.min(u.max, lvl + (max ? 0 : 1))) + "</div>" +
-        '<div class="pips">' + pipsFlex(lvl, u.max) + "</div>";
+        '<div class="lv"><span class="pips">' + pipsFlex(lvl, u.max) + "</span>" +
+        '<span class="lvn">' + lvl + " / " + u.max + "</span></div>";
       el.addEventListener("click", () => {
         const l = metaLvl(u.id);
         if (l >= u.max) return;
@@ -4601,7 +4871,7 @@ const UI = {
         '<span class="d">Стартовый модуль: <b style="color:' + WEAPONS[c.weapon].color + '">' + WEAPONS[c.weapon].name + "</b></span>" +
         (owned ? '<span class="lock" style="color:var(--cyan)">' + (save.char === c.id ? "◆ ВЫБРАН" : "ДОСТУПЕН") + "</span>"
           : !opened ? '<span class="lock">🔒 ' + (need ? need.text : "ещё закрыт") + "</span>"
-            : '<span class="lock">🔒 ' + c.price + " ◈</span>");
+            : '<span class="lock">🔒 ' + cur(c.price) + "</span>");
       el.addEventListener("click", () => {
         if (!opened) { this.toast("ЕЩЁ ЗАКРЫТО"); return; }
         if (owned) { save.char = c.id; Sfx.pick(); }
@@ -4725,7 +4995,7 @@ function frame(t) {
   hotkeys();
   if (g.state === "play" && g.p) {
     update(dt);
-    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1), g.arenaDef && g.arenaDef.music);
+    Sfx.music(dt, musicPush(), musicCfg());
     UI.syncHud();
   }
   render();

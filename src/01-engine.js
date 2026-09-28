@@ -18,6 +18,21 @@ const fmtTime = s => {
   return String((s / 60) | 0).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
 };
 const $ = id => document.getElementById(id);
+
+/* Крупные числа разделяем тонким пробелом: обычный неразрывный из
+   toLocaleString в моноширинном шрифте выглядит дырой. */
+const fmtNum = n => Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ");
+
+/* Фирменный осколок вместо знака «◈»: тот терялся среди цифр и выглядел
+   как опечатка. Цвет наследуется через currentColor, поэтому одна и та же
+   разметка годится и для золотого баланса, и для приглушённой цены. */
+const SHARD = '<svg class="shd" viewBox="0 0 16 20" fill="none" aria-hidden="true">' +
+  '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" fill="currentColor" opacity=".16"/>' +
+  '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+  '<path d="M8 .8v18.4M.8 6l7.2 4 7.2-4" stroke="currentColor" stroke-width=".9" opacity=".5"/></svg>';
+/* цена/баланс одним куском: иконка + число с разделителями */
+const cur = (n, cls) => '<span class="cur' + (cls ? " " + cls : "") + '">' +
+  SHARD + '<b>' + fmtNum(n) + '</b></span>';
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; }
   return a;
@@ -150,6 +165,8 @@ const Sfx = {
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
   ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
+  /* крит: короткий яркий щелчок поверх обычного попадания */
+  crit() { this.blip(1760, 0.06, "square", 0.045, 520); },
   cycle() {
     this.seq([0, 1, 2], 150, n => this.blip(220 / Math.pow(1.22, n), 0.6, "sawtooth", 0.14, -30));
     this.noise(1.1, 0.16, 300);

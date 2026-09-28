@@ -22,6 +22,8 @@ const DIM_TIME = 0.22;        // «пусто»: иконка коротко т�
 const DIM_GAP = 0.5;          // и не мигает чаще этого, пока держишь кнопку
 const REFUND_PER_KILL = 0.035; // столько заряда возвращает одно убийство навыком
 const REFUND_SHARE = 0.45;     // но суммарно не больше 45% заряда за каст
+const PICK_BOOST = 1;         // столько держится расширенный сбор после рывка
+const PICK_BOOST_MUL = 0.9;   // …и настолько он шире обычного в первый момент
 const MAX_ENEMIES = 340;      // потолок толпы: выше начинает проседать кадр
 const MAX_WEAPONS = 4;
 const MAX_PASSIVES = 6;
@@ -34,7 +36,7 @@ const g = {
   parts: [], nums: [], slashes: [], zaps: [], beams: [], wells: [], props: [], pools: [], discs: [],
   grid: new Grid(56), pgrid: new Grid(96), propT: 0,
   cam: { x: 0, y: 0 }, shake: 0,
-  kills: 0, gold: 0, bonus: 0, bossIdx: 0, boss: null,
+  kills: 0, gold: 0, bonus: 0, bossIdx: 0, boss: null, crits: 0,
   spawnAcc: 0, pendingUps: 0, won: false, damageDealt: 0,
   chestT: 0, chests: 0, reaper: false, autoPick: null,
   /* кто именно наносит урон прямо сейчас — источник пишется в статистику */
@@ -46,7 +48,7 @@ const g = {
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
   endless: false, hyper: false, cycle: 0,
-  runQuests: 0, firstHit: -1, achT: 0
+  runQuests: 0, firstHit: -1, achT: 0, runAch: []
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -59,7 +61,7 @@ function makePlayer(charId) {
     x: 0, y: 0, vx: 0, vy: 0, r: 11, face: -Math.PI / 2,
     level: 1, xp: 0, xpNext: 14,
     weapons: [], passives: {},
-    dashT: 0, dashCd: 0, inv: 0, hitFlash: 0,
+    dashT: 0, dashCd: 0, pickT: 0, inv: 0, hitFlash: 0,
     ability: ABILITIES[save.ability] ? save.ability : "phantom",
     abCharge: 1, abLvl: 1, abRefund: 0, abGap: 0,  // заряды копятся, первый выдаём сразу
     chargeSeen: 1, dashSeen: false,                // для отлова момента готовности
@@ -91,6 +93,8 @@ function recalc(p) {
   p.areaMul = 1 + L("area") * 0.12;
   p.speed = 196 * (1 + L("boots") * 0.09) * (1 + metaLvl("spd") * 0.04) * (m.spd || 1);
   p.pickR = 78 * (1 + L("magnet") * 0.3) * (1 + metaLvl("mag") * 0.18);
+  p.bossMul = 1 + metaLvl("siege") * 0.05;     // «Сапёр»: прибавка только по боссам
+  p.crit = metaLvl("crit") * 0.05;             // «Пробой»: шанс на двойной урон
   p.armor = L("armor") * 2 + metaLvl("armor");
   p.regen = metaLvl("regen") * 0.3;
   p.greedMul = (1 + L("greed") * 0.18) * (1 + metaLvl("greed") * 0.1) * (m.greed || 1)
@@ -136,6 +140,26 @@ function setArena(i) {
   g.bosses.sort((a, b) => a.t - b.t);
 }
 
+/* Музыка слушается модификаторов: гипер гонит темп и делает бас злее,
+   каждый круг поднимает тональность на полтона. Настройки кэшируются —
+   объект пересобирается только когда что-то из этого меняется. */
+let _mcKey = "", _mc = null;
+function musicCfg() {
+  const base = g.arenaDef && g.arenaDef.music;
+  if (!base) return null;
+  const key = g.arena + "|" + (g.hyper ? 1 : 0) + "|" + g.cycle;
+  if (key === _mcKey) return _mc;
+  _mcKey = key;
+  _mc = Object.assign({}, base);
+  if (g.hyper) { _mc.beat = base.beat * 0.84; _mc.wave = "sawtooth"; }
+  _mc.root = base.root * Math.pow(2, Math.min(6, g.cycle) / 12);
+  return _mc;
+}
+/* плотность аранжировки: к концу забега и под модификаторами она выше */
+function musicPush() {
+  return clamp(g.time / RUN_LEN + (g.hyper ? 0.3 : 0) + g.cycle * 0.25, 0, 1);
+}
+
 /* сколько осталось до следующего сундука — для счётчика в HUD */
 function chestLeft() {
   if (g.time < CHEST_FIRST) return CHEST_FIRST - g.time;
@@ -145,7 +169,7 @@ function chestGoldNext() { return (g.chests + 1) % CHEST_GOLD_EVERY === 0; }
 
 function startRun() {
   g.state = "play";
-  g.time = 0; g.kills = 0; g.gold = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
+  g.time = 0; g.kills = 0; g.gold = 0; g.crits = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
   g.spawnAcc = 0; g.pendingUps = 0; g.won = false; g.shake = 0; g.damageDealt = 0;
   g.chestT = 0; g.chests = 0; g.reaper = false; g.autoPick = null;
   g.stats = {}; g.dmgSource = null; g.dmgName = "";
@@ -154,7 +178,7 @@ function startRun() {
   g.rerolls = metaLvl("reroll"); g.unlockT = 0;
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
-  g.runQuests = 0; g.firstHit = -1; g.achT = 0;
+  g.runQuests = 0; g.firstHit = -1; g.achT = 0; g.runAch.length = 0;
   g.endless = false; g.hyper = false; g.cycle = 0;
   setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
@@ -208,14 +232,23 @@ function statOf(id, name) {
   return st;
 }
 
+/* Вся боевая математика сходится сюда, поэтому «Сапёр» и «Пробой» считаются
+   в одном месте — и работают для любого оружия, навыка и мины разом. */
 function damageEnemy(e, dmg, dirX, dirY, kb, color) {
   if (e.dead) return;
+  const pl = g.p;
+  let crit = false;
+  if (pl) {
+    if (e.boss && pl.bossMul > 1) dmg *= pl.bossMul;
+    if (pl.crit > 0 && Math.random() < pl.crit) { dmg *= 2; crit = true; }
+  }
   if (g.dmgSource) statOf(g.dmgSource, g.dmgName).dmg += Math.min(dmg, e.hp);  // без оверкилла
   e.hp -= dmg;
   g.damageDealt += dmg;
-  e.flash = 0.09;
+  e.flash = crit ? 0.16 : 0.09;
   if (kb && !e.boss) { e.kx += dirX * kb; e.ky += dirY * kb; }
-  pushNum(e.x, e.y - e.r, Math.round(dmg), color || "#fff");
+  pushNum(e.x, e.y - e.r, Math.round(dmg), crit ? "#ffc23d" : (color || "#fff"), crit);
+  if (crit) { g.crits++; Sfx.crit(); }
   if (e.hp <= 0) killEnemy(e); else if (Math.random() < 0.35) Sfx.hit();
 }
 
@@ -484,9 +517,9 @@ function burst(x, y, color, n, sp) {
     });
   }
 }
-function pushNum(x, y, v, color) {
+function pushNum(x, y, v, color, crit) {
   if (g.nums.length > 90) g.nums.shift();
-  g.nums.push({ x: x + rnd(-7, 7), y: y, v: v, life: 0.7, color: color });
+  g.nums.push({ x: x + rnd(-7, 7), y: y, v: v, life: crit ? 0.95 : 0.7, color: color, crit: !!crit });
 }
 
 /* ---------- боссы: поведение ------------------------------------------ */
@@ -992,7 +1025,7 @@ function questProgress(kind, key, amount) {
       g.runQuests++;
       g.questBonus += q.reward;
       g.gold += q.reward;
-      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ◈");
+      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ОСКОЛКОВ");
       Sfx.ultReady();
       if (UI.flashQuest) UI.flashQuest();
     }
@@ -1092,6 +1125,7 @@ function checkAch() {
     if (!ok) continue;
     save.ach.push(a.id);
     got++;
+    if (g.runAch.indexOf(a.id) < 0) g.runAch.push(a.id);
     UI.achPop(a);
   }
   if (got) writeSave();
@@ -1129,7 +1163,7 @@ function endRun(won) {
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
     bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul,
-    cycle: g.cycle, mods: modGreed()
+    cycle: g.cycle, mods: modGreed(), crits: g.crits, ach: g.runAch.slice()
   });
 }
 
@@ -1141,6 +1175,7 @@ function update(dt) {
 
   /* --- игрок --- */
   const ax = axis();
+  if (p.pickT > 0) p.pickT -= dt;       // «шлейф» расширенного сбора после рывка
   if (p.dashT > 0) {
     p.dashT -= dt;
     p.x += p.dvx * dt; p.y += p.dvy * dt;
@@ -1161,6 +1196,7 @@ function update(dt) {
     if (p.dashCd > 0) p.dashCd -= dt;
     if ((tookKey(" ") || tookKey("shift")) && p.dashCd <= 0) {
       p.dashT = 0.17; p.dashCd = p.dashCdMax;
+      p.pickT = PICK_BOOST;             // радиус сбора расширен и плавно сходит на нет
       const a = (p.vx || p.vy) ? Math.atan2(p.vy, p.vx) : p.face;
       p.dvx = Math.cos(a) * 1180; p.dvy = Math.sin(a) * 1180;
       Sfx.dash();
@@ -1475,7 +1511,9 @@ function update(dt) {
   }
 
   /* --- кристаллы опыта --- */
-  const pr = p.pickR, pr2 = pr * pr;
+  /* после рывка радиус сбора расширен и за секунду возвращается к обычному */
+  const pr = p.pickR * (1 + PICK_BOOST_MUL * Math.max(0, p.pickT) / PICK_BOOST);
+  const pr2 = pr * pr;
   for (let i = 0; i < g.gems.length; i++) {
     const q = g.gems[i];
     q.t += dt;

@@ -458,15 +458,22 @@ function render() {
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = "source-over";
 
-  /* цифры урона */
-  ctx.font = "600 13px 'IBM Plex Mono',monospace";
+  /* цифры урона: криты крупнее, с обводкой и коротким подскоком */
   ctx.textAlign = "center";
   for (let i = 0; i < g.nums.length; i++) {
     const n = g.nums[i];
     if (!vis(n)) continue;
-    ctx.globalAlpha = clamp(n.life / 0.7, 0, 1);
+    const crit = n.crit;
+    ctx.globalAlpha = clamp(n.life / (crit ? 0.95 : 0.7), 0, 1);
+    ctx.font = crit ? "700 19px 'Chakra Petch',sans-serif" : "600 13px 'IBM Plex Mono',monospace";
+    const y = crit ? n.y - (0.95 - n.life) * 16 : n.y;
+    if (crit) {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(8,10,18,.85)";
+      ctx.strokeText(n.v, n.x, y);
+    }
     ctx.fillStyle = n.color;
-    ctx.fillText(n.v, n.x, n.y);
+    ctx.fillText(n.v, n.x, y);
   }
   ctx.globalAlpha = 1;
   ctx.textAlign = "left";

@@ -1,6 +1,5 @@
-﻿# Собирает игру из src/ в два файла:
-#   nightshift.html — тело страницы (для публикации артефактом)
-#   index.html      — самодостаточная страница (открыть двойным кликом)
+﻿# Собирает игру из src/ в index.html — самодостаточную страницу,
+# которую можно открыть двойным кликом или выложить на Pages.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $src = Join-Path $root "src"
@@ -28,12 +27,9 @@ $page = $head + "`r`n" + $body + "`r`n</body>`r`n</html>`r`n"
 # Переводы строк приводим к LF: git хранит файлы именно так, и иначе
 # собранный index.html вечно выглядел бы изменённым — и на твоей машине,
 # и в проверке на раннере.
-$body = $body -replace "`r`n", "`n"
 $page = $page -replace "`r`n", "`n"
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText((Join-Path $root "nightshift.html"), $body, $utf8)
 [System.IO.File]::WriteAllText((Join-Path $root "index.html"), $page, $utf8)
 
-"nightshift.html : {0:N0} байт" -f (Get-Item (Join-Path $root "nightshift.html")).Length
-"index.html      : {0:N0} байт" -f (Get-Item (Join-Path $root "index.html")).Length
+"index.html : {0:N0} байт" -f (Get-Item (Join-Path $root "index.html")).Length
