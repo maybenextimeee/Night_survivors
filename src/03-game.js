@@ -7,7 +7,6 @@ const CHEST_FAST = 25;
 const CHEST_GOLD_EVERY = 4;   // каждый четвёртый сундук — золотой
 const WAVE_EVERY = 120;       // большая волна раз в две минуты
 const WAVE_WARN = 2.5;        // столько секунд предупреждаем до её выхода
-const ENDLESS_BOSS_EVERY = 150; // после финала боссы приходят по кругу раз в 2.5 минуты
 const RUSH_PER_KILL = 0.025;  // +2.5% скорости за врага, убитого активным навыком…
 const RUSH_CAP = 0.3;         // …не выше +30%…
 const RUSH_TIME = 1;          // …держится секунду после каста…
@@ -46,7 +45,7 @@ const g = {
   /* арена забега: свой набор врагов, боссов и палитра пола */
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
-  endless: false, endlessT: 0, endlessIdx: 0,
+  endless: false, hyper: false, cycle: 0,
   runQuests: 0, firstHit: -1, achT: 0
 };
 const scratch = [];
@@ -102,6 +101,10 @@ function recalc(p) {
   p.luck = L("luck") * 0.06 + metaLvl("luck") * 0.05 + (m.luck || 0);
   p.areaMul *= (m.area || 1);
   p.dashCdMax = Math.max(0.7, 2.2 - metaLvl("dash") * 0.45);
+  /* Ульта — единственное, что не качается картами дальше пятого уровня,
+     и к поздней игре она проседала на фоне оружия. Поэтому её урон растёт
+     вместе с уровнем персонажа: +2% за уровень, потолок ×2.5 (75-й уровень). */
+  p.ultMul = Math.min(2.5, 1 + (p.level - 1) * 0.02);
   const newMax = p.baseHp + L("heart") * 22;
   if (newMax !== p.maxHp) { const d = newMax - p.maxHp; p.maxHp = newMax; if (d > 0) p.hp += d; }
   p.hp = Math.min(p.hp, p.maxHp);
@@ -113,13 +116,23 @@ function arenaUnlocked(i) {
   if (i <= 0) return true;
   return save.arenaDone.indexOf(ARENAS[i - 1].id) >= 0;
 }
+function arenaMods(id) {
+  const m = save.mods[id];
+  return { hyper: !!(m && m.hyper), endless: !!(m && m.endless) };
+}
+/* модификатор можно включить только на уже пройденной арене */
+function modsAllowed(i) { return save.arenaDone.indexOf(ARENAS[i].id) >= 0; }
 function setArena(i) {
   if (!(i >= 0 && i < ARENAS.length) || !arenaUnlocked(i)) i = 0;
   g.arena = i;
   g.arenaDef = ARENAS[i];
   g.roster = ARENAS[i].roster.map(id => ENEMY_BY_ID[id]).filter(Boolean);
+  const mods = modsAllowed(i) ? arenaMods(ARENAS[i].id) : { hyper: false, endless: false };
+  g.hyper = mods.hyper;
+  g.endless = mods.endless;
   const last = i === ARENAS.length - 1;
-  g.bosses = BOSSES.filter(b => b.arena === i || (b.reaper && !last));
+  /* в бесконечности Жнеца нет: он обрывает забег, а тут забег не обрывается */
+  g.bosses = BOSSES.filter(b => b.arena === i || (b.reaper && !last && !g.endless));
   g.bosses.sort((a, b) => a.t - b.t);
 }
 
@@ -142,7 +155,7 @@ function startRun() {
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
   g.runQuests = 0; g.firstHit = -1; g.achT = 0;
-  g.endless = false; g.endlessT = 0; g.endlessIdx = 0;
+  g.endless = false; g.hyper = false; g.cycle = 0;
   setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
@@ -154,14 +167,11 @@ function startRun() {
   g.cam.x = 0; g.cam.y = 0;
   save.runs++;
   writeSave();
-  /* «Предзагрузка» из мастерской — бесплатные апгрейды на старте */
-  g.pendingUps = metaLvl("start");
   g.quests = makeQuests();
   Sfx.init(); Sfx.resume();
   clearPressed();
   UI.enterPlay();
   UI.showQuestIntro();
-  if (g.pendingUps > 0) openLevelUp();
 }
 
 /* ---------- вспомогательные боевые функции (их зовёт оружие) ----------- */
@@ -241,11 +251,10 @@ function killEnemy(e) {
     UI.toast("★ " + e.def.name + " ПОВЕРЖЕН");
     if (e.def.reaper) { save.reaperKill = true; writeSave(); }
     if (e.def.finalBoss) {
-      /* игра пройдена — но забег не обрывается: дальше бесконечная ночь */
+      /* игра пройдена — но забег не обрывается: дальше идут круги */
       save.beaten = true;
       writeSave();
       g.endless = true;
-      g.endlessT = ENDLESS_BOSS_EVERY;
       g.shake = 40;
       UI.toast("★ ПЕРВОИСТОЧНИК УНИЧТОЖЕН");
       UI.toast("НОЧЬ ПРОДОЛЖАЕТСЯ");
@@ -530,17 +539,28 @@ function difficulty() {
      враги поздних арен и сами по себе бьют больнее, и полный множитель
      сверху сносил бы игрока с одного касания уже на первой минуте */
   const amDmg = 1 + (am - 1) * 0.55;
+  const H = g.hyper ? ARENA_MODS[0] : null;
+  /* круг в бесконечности: каждые 15 минут расписание начинается заново,
+     а враги приходят крепче предыдущего круга */
+  const cHp = Math.pow(CYCLE_HP, g.cycle), cDmg = Math.pow(CYCLE_DMG, g.cycle);
   return {
-    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am,
-    dmg: (1 + m * 0.32) * curseMul * amDmg,
-    spd: 1 + Math.min(0.45, m * 0.048),
-    rate: Math.min(18, 2.6 + m * 1.6)
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am * cHp * (H ? H.hp : 1),
+    dmg: (1 + m * 0.32) * curseMul * amDmg * cDmg * (H ? H.dmg : 1),
+    spd: (1 + Math.min(0.45, m * 0.048)) * (H ? H.spd : 1),
+    rate: Math.min(H ? 24 : 18, 2.6 + m * 1.6) * (H ? H.rate : 1)
   };
+}
+/* надбавка к добыче за выбранные модификаторы и пройденные круги */
+function modGreed() {
+  let mul = 1;
+  if (g.hyper) mul += ARENA_MODS[0].greed;
+  if (g.endless) mul += ARENA_MODS[1].greed + g.cycle * CYCLE_GREED;
+  return mul;
 }
 function spawnEnemy(def, x, y, forceElite) {
   if (g.enemies.length >= MAX_ENEMIES) return null;
   const d = difficulty();
-  const elite = forceElite || Math.random() < 0.045 + (g.p ? g.p.luck : 0);
+  const elite = forceElite || Math.random() < 0.045 + (g.p ? g.p.luck : 0) + (g.hyper ? ARENA_MODS[0].elite : 0);
   const e = {
     def: def, x: x, y: y, r: def.r * (elite ? 1.5 : 1), color: elite ? "#ffc23d" : def.color,
     hp: def.hp * d.hp * (elite ? 5 : 1), maxHp: def.hp * d.hp * (elite ? 5 : 1),
@@ -633,6 +653,16 @@ function director(dt) {
     }
   }
 
+  /* в бесконечности пятнадцатая минута всё равно закрывает арену —
+     просто без Жнеца и без остановки забега */
+  if (g.endless && !g.won && g.time >= RUN_LEN) {
+    g.won = true;
+    if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+    writeSave();
+    UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+    checkAch();
+  }
+
   /* сундук приходит по расписанию на спине отдельного элитника,
      а не сыплется с каждого — иначе билд закрывается к пятой минуте */
   if (g.time >= CHEST_FIRST) {
@@ -651,16 +681,30 @@ function director(dt) {
     }
   }
 
-  /* босс по расписанию */
-  if (g.bossIdx < g.bosses.length && g.time >= g.bosses[g.bossIdx].t) {
+  /* новый круг: расписание боссов начинается заново, враги крепче.
+     Включается модификатором «Бесконечность» и после финального босса. */
+  if (g.endless && g.time >= (g.cycle + 1) * RUN_LEN) {
+    g.cycle++;
+    g.bossIdx = 0;
+    g.waveT = Math.min(g.waveT, 10);
+    UI.toast("◈ КРУГ " + (g.cycle + 1) + " · ВРАГИ КРЕПЧЕ");
+    Sfx.cycle();
+    g.shake = Math.max(g.shake, 24);
+  }
+
+  /* босс по расписанию (внутри текущего круга) */
+  const cycleT = g.time - g.cycle * RUN_LEN;
+  if (g.bossIdx < g.bosses.length && cycleT >= g.bosses[g.bossIdx].t) {
     const def = g.bosses[g.bossIdx++];
     if (def.finalBoss) {
       /* финал третьей арены: ночь уже пережита, но выходит то, ради чего
          всё затевалось. Забег после его смерти не кончается. */
-      g.won = true;
-      if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
-      writeSave();
-      UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      if (!g.won) {
+        g.won = true;
+        if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+        writeSave();
+        UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      }
       spawnBoss(def);
       return;
     }
@@ -680,16 +724,6 @@ function director(dt) {
       return;
     }
     spawnBoss(def);
-  }
-  /* бесконечный режим: расписание кончилось, но боссы продолжают приходить
-     по кругу и с каждым разом крепче — иначе после финала нечего делать */
-  if (g.endless && !g.boss) {
-    g.endlessT -= dt;
-    if (g.endlessT <= 0) {
-      g.endlessT = ENDLESS_BOSS_EVERY;
-      const pool = g.bosses.filter(b => !b.reaper);
-      if (pool.length) spawnBoss(pool[g.endlessIdx++ % pool.length]);
-    }
   }
   if (g.boss && g.enemies.length > MAX_ENEMIES * 0.7) return;
 
@@ -713,6 +747,7 @@ function gainXp(v) {
     p.xp -= p.xpNext;
     p.level++;
     p.xpNext = Math.round(10 + 7 * p.level + p.level * p.level * 0.62);
+    p.ultMul = Math.min(2.5, 1 + (p.level - 1) * 0.02);
     g.pendingUps++;
   }
   if (g.pendingUps > 0 && g.state === "play") openLevelUp();
@@ -1070,7 +1105,7 @@ function endRun(won) {
   const p = g.p;
   const mins = g.time / 60;
   const base = g.gold + Math.floor(g.kills * 0.35) + Math.floor(mins * 12) + p.level * 3 + g.bonus;
-  const total = Math.max(1, Math.round(base * p.greedMul * (won ? 1.5 : 1)));
+  const total = Math.max(1, Math.round(base * p.greedMul * modGreed() * (won ? 1.5 : 1)));
   save.shards += total;
   if (g.time > save.best) save.best = g.time;
   if (g.kills > save.bestKills) save.bestKills = g.kills;
@@ -1093,7 +1128,8 @@ function endRun(won) {
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
-    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul
+    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul,
+    cycle: g.cycle, mods: modGreed()
   });
 }
 
@@ -1157,7 +1193,13 @@ function update(dt) {
     p.abRefund = 0;                          // ульта зарядом не возвращается
     p.abGap = AB_GAP;
     setSrc("ab:" + p.ability + ":ult", ab.name + " · ульта");
+    /* прибавка за уровень подмешивается в общий множитель урона на время
+       каста: так её подхватывают и колодцы, которые забирают dmgMul при
+       рождении и живут дальше сами по себе */
+    const baseDmg = p.dmgMul;
+    p.dmgMul = baseDmg * p.ultMul;
     ab.ult.cast(g, wx, wy, p.abLvl);
+    p.dmgMul = baseDmg;
     setSrc(null, "");
     UI.toast("✦ " + ab.ult.short);
   } else if (p.abCharge >= 1 && (mouse.down || keys.q || keys["й"])) {

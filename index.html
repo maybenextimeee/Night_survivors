@@ -303,7 +303,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .qi-card:nth-child(3){animation-delay:.28s}
 @keyframes qiPop{from{opacity:0;transform:translateY(16px) scale(.9)}}
 .qi-card .ico{width:34px;height:34px;flex:none}
-.qi-card .qi-t{text-align:left}
+/* спаны внутри инлайновые — без колонки все три строки слипались в одну */
+.qi-card .qi-t{text-align:left;display:flex;flex-direction:column;gap:3px}
 .qi-card .qi-l{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
   color:var(--muted)}
 .qi-card .qi-n{font-family:var(--display);font-size:17px;letter-spacing:.6px;text-transform:uppercase}
@@ -453,8 +454,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   color:var(--ac,#3ee8ff)}
 .arena .nm{font-family:var(--display);font-size:20px;letter-spacing:1px;text-transform:uppercase}
 .arena .ds{font-size:12.5px;color:var(--muted);line-height:1.45}
-.arena .mt{display:flex;gap:14px;font-family:var(--mono);font-size:10.5px;color:var(--muted);
-  margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
+.arena .mt{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--mono);font-size:10.5px;
+  color:var(--muted);margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
 .arena .mt b{color:var(--ink);font-weight:600}
 .arena .prev{display:flex;gap:6px}
 .arena .prev i{width:13px;height:13px;display:block;background:currentColor;
@@ -480,6 +481,41 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .achit.got{background:#16203a;box-shadow:inset 0 0 22px -12px var(--rar,#8fa3c8)}
 .achit.locked{opacity:.44}
 .achit.locked .nm{color:var(--muted)}
+
+/* номер круга в бесконечности — приклеен к часам, чтобы не искать глазами */
+.clockrow{display:flex;align-items:baseline;gap:9px}
+.clockrow .cyc{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--gold);
+  text-shadow:0 0 10px rgba(255,194,61,.5);white-space:nowrap}
+.clockrow .cyc[hidden]{display:none}
+
+/* --- модификаторы в карточке арены --- */
+/* мини-меню живёт в подвале карточки: в углу оно наезжало на название */
+.arena .amods{display:flex;flex-wrap:wrap;gap:6px;padding-top:9px;border-top:1px dashed var(--line)}
+.arena .mod{display:flex;align-items:center;gap:6px;padding:5px 9px;background:#0b1020;
+  border:1px solid var(--line);color:var(--muted);font:inherit;font-family:var(--mono);
+  font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;line-height:1}
+.arena .mod:hover{border-color:var(--ac,#3ee8ff);color:var(--ink)}
+.arena .mod b{font-size:11px;font-weight:600}
+.arena .mod .box{width:9px;height:9px;border:1px solid currentColor;flex:none}
+.arena .mod.on{color:var(--ac,#3ee8ff);border-color:var(--ac,#3ee8ff);background:#12203a}
+.arena .mod.on .box{background:currentColor}
+/* когда что-то включено, у карточки заметнее рамка — видно с первого взгляда */
+.arena.modded{border-color:var(--ac,#3ee8ff);box-shadow:inset 0 0 40px -22px var(--ac,#3ee8ff)}
+.arena .ds{padding-right:76px}
+.arena .mt{margin-top:0}
+.arena .modhint{font-family:var(--mono);font-size:10.5px;color:var(--ac,#3ee8ff);line-height:1.45}
+
+/* --- фильтры на экране достижений --- */
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
+.filters .sep{width:1px;height:18px;background:var(--line);margin:0 5px}
+.filters button{padding:5px 11px;background:#0b1020;border:1px solid var(--line);color:var(--muted);
+  font:inherit;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;line-height:1.4}
+.filters button:hover{color:var(--ink);border-color:var(--rr,#3ee8ff)}
+.filters button.on{color:var(--rr,#3ee8ff);border-color:var(--rr,#3ee8ff);background:#12203a}
+.filters button i{font-style:normal;opacity:.6;margin-left:5px}
+.achgrid .none{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--muted);
+  padding:22px 4px;text-align:center}
 </style>
 
 <canvas id="cv"></canvas>
@@ -489,7 +525,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 <div id="hud">
   <div class="topbar">
     <div>
-      <div class="clock" id="clock">00:00</div>
+      <div class="clockrow"><div class="clock" id="clock">00:00</div>
+        <span class="cyc" id="cycTag" hidden>КРУГ 2</span></div>
       <div class="timeline" id="timeline"><i class="tfill" id="tlFill"></i></div>
       <div class="stats">
         <span>УБИЙСТВ <b id="sKills">0</b></span>
@@ -621,6 +658,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="panel wide">
     <p class="eyebrow">Что уже сделано</p>
     <h2>Достижения <span class="shards" id="achCount">0 / 0</span></h2>
+    <div class="filters" id="achFilters"></div>
     <div class="achgrid" id="achGrid"></div>
     <div class="row"><button id="bAchBack">Назад <span class="k">ESC</span></button></div>
   </div>
@@ -842,23 +880,31 @@ const Sfx = {
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
   ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
+  cycle() {
+    this.seq([0, 1, 2], 150, n => this.blip(220 / Math.pow(1.22, n), 0.6, "sawtooth", 0.14, -30));
+    this.noise(1.1, 0.16, 300);
+  },
   ultReady() { this.blip(1420, 0.07, "triangle", 0.055, 120); setTimeout(() => this.blip(2130, 0.09, "triangle", 0.05, 160), 70); },
   empty() { this.blip(220, 0.06, "square", 0.03, -70); },
   die() { this.seq([0, 1, 2, 3, 4], 130, (n) => this.blip(360 / (1 + n * 0.35), 0.34, "sawtooth", 0.15, -70)); },
   win() { this.seq([0, 4, 7, 12, 16, 19], 140, (n) => this.blip(330 * Math.pow(2, n / 12), 0.5, "triangle", 0.12)); },
   /* фон: медленное басовое остинато, слои добавляются по мере накала */
-  music(dt, intensity) {
+  /* тональность, лад и темп приходят от арены — см. ARENAS[].music */
+  music(dt, intensity, m) {
     if (!this.ctx || !this.on) return;
     this.timer -= dt;
     if (this.timer > 0) return;
-    const beat = 0.34;
+    const beat = (m && m.beat) || 0.34;
     this.timer = beat;
-    const root = 55, scale = [0, 3, 5, 7, 10, 12, 15];
+    const root = (m && m.root) || 55;
+    const scale = (m && m.scale) || [0, 3, 5, 7, 10, 12, 15];
+    const wave = (m && m.wave) || "sawtooth";
+    const lead = (m && m.lead) || "square";
     const s = this.step++;
-    if (s % 4 === 0) this.blip(root * Math.pow(2, (s % 32 < 16 ? 0 : 3) / 12), beat * 2.4, "sawtooth", 0.1, 0, this.musicGain);
+    if (s % 4 === 0) this.blip(root * Math.pow(2, (s % 32 < 16 ? 0 : 3) / 12), beat * 2.4, wave, 0.1, 0, this.musicGain);
     if (s % 2 === 0) this.noise(0.04, 0.02 + intensity * 0.015, 6000);
     if (intensity > 0.25 && s % 4 === 2)
-      this.blip(root * 4 * Math.pow(2, scale[(s * 3) % scale.length] / 12), beat * 0.8, "square", 0.03, 0, this.musicGain);
+      this.blip(root * 4 * Math.pow(2, scale[(s * 3) % scale.length] / 12), beat * 0.8, lead, 0.03, 0, this.musicGain);
     if (intensity > 0.6 && s % 8 === 5)
       this.blip(root * 8 * Math.pow(2, scale[(s * 5) % scale.length] / 12), beat * 0.5, "triangle", 0.025, 0, this.musicGain);
   }
@@ -873,6 +919,8 @@ const defaultSave = () => ({
   unlocked: [], total: DEF_TOTAL(),
   /* арены: какая выбрана и какие уже закрыты (дошёл до 15:00) */
   arena: 0, arenaDone: [], beaten: false,
+  /* модификаторы по аренам: { quarter: { hyper: true, endless: false }, … } */
+  mods: {},
   /* достижения и список уже собранных эволюций — по ним считаются ачивки */
   ach: [], evoSeen: []
 });
@@ -889,6 +937,7 @@ function loadSave() {
   if (!save.total || typeof save.total !== "object") save.total = DEF_TOTAL();
   else save.total = Object.assign(DEF_TOTAL(), save.total);
   if (!Array.isArray(save.arenaDone)) save.arenaDone = [];
+  if (!save.mods || typeof save.mods !== "object") save.mods = {};
   if (!Array.isArray(save.ach)) save.ach = [];
   if (!Array.isArray(save.evoSeen)) save.evoSeen = [];
   if (typeof save.arena !== "number") save.arena = 0;
@@ -1578,21 +1627,45 @@ const ARENAS = [
     id: "quarter", name: "Неоновый квартал", tag: "Начало",
     d: "Спальный район, который в полночь остался без сети. Знакомая публика из подсетей.",
     roster: ["crawler", "runner", "brute", "shooter", "swarm", "ghost"],
-    mult: 1, floor: ["#0a0e1a", "#05070e"], grid: "#2a3e63", accent: "#3ee8ff"
+    mult: 1, floor: ["#0a0e1a", "#05070e"], grid: "#2a3e63", accent: "#3ee8ff",
+    /* музыка: корень баса в герцах и лад. Квартал — ровный минор */
+    music: { root: 55, scale: [0, 3, 5, 7, 10, 12, 15], beat: 0.34, wave: "sawtooth", lead: "square" }
   },
   {
     id: "foundry", name: "Литейный цех", tag: "Жарко",
     d: "Старое производство под кварталом. Здесь всё раскалено, и местные крепче.",
     roster: ["slag", "welder", "hulk", "spitter", "runner", "swarm"],
-    mult: 1.35, floor: ["#1a0c06", "#0b0503"], grid: "#7a3a16", accent: "#ff8a3c"
+    mult: 1.35, floor: ["#1a0c06", "#0b0503"], grid: "#7a3a16", accent: "#ff8a3c",
+    /* цех ниже и грязнее: бас на кварту вниз, фригийский лад, темп тяжелее */
+    music: { root: 41, scale: [0, 1, 5, 7, 8, 12, 13], beat: 0.4, wave: "square", lead: "sawtooth" }
   },
   {
     id: "core", name: "Ядро сети", tag: "Финал",
     d: "То, откуда всё лезло. На пятнадцатой минуте выходит Первоисточник — конец истории.",
     roster: ["shard", "warden", "glitch", "turret", "ghost", "swarm"],
-    mult: 1.8, floor: ["#0d0618", "#05030d"], grid: "#5b2a86", accent: "#c77dff"
+    mult: 1.8, floor: ["#0d0618", "#05030d"], grid: "#5b2a86", accent: "#c77dff",
+    /* ядро выше и холоднее: целотонный лад, быстрый пульс, чистые волны */
+    music: { root: 62, scale: [0, 2, 4, 6, 8, 10, 12], beat: 0.29, wave: "triangle", lead: "triangle" }
   }
 ];
+
+/* --- модификаторы арены ------------------------------------------------
+   Открываются на той арене, которую ты уже закрыл. Ставятся галочкой прямо
+   в карточке выбора и действуют только на неё.                            */
+const ARENA_MODS = [
+  {
+    id: "hyper", name: "Гипер", short: "⚡",
+    d: "Все враги заметно крепче, быстрее и валят гуще. Зато осколков вдвое больше.",
+    hp: 1.7, dmg: 1.35, spd: 1.08, rate: 1.2, elite: 0.035, greed: 1
+  },
+  {
+    id: "endless", name: "Бесконечность", short: "∞",
+    d: "Жнец не приходит. Каждые 15 минут начинается новый круг: расписание боссов повторяется, а враги становятся крепче предыдущего круга.",
+    greed: 0.35
+  }
+];
+/* прибавка за каждый пройденный круг в режиме бесконечности */
+const CYCLE_HP = 1.45, CYCLE_DMG = 1.16, CYCLE_GREED = 0.3;
 
 /* --- достижения --------------------------------------------------------
    Каждое проверяется по одному снимку статистики (см. achStats в 03-game.js),
@@ -1654,7 +1727,6 @@ const META = [
   { id: "regen", name: "Наноремонт", max: 4, cost: l => [70, 150, 280, 460][l], d: l => "+" + (l * 0.3).toFixed(1) + " HP в секунду" },
   { id: "dash", name: "Форсаж", max: 3, cost: l => [80, 170, 320][l], d: l => "−" + (l * 0.45).toFixed(2) + " с к откату рывка" },
   { id: "greed", name: "Скан трофеев", max: 5, cost: l => [45, 95, 170, 300, 500][l], d: l => "+" + (l * 10) + "% осколков за забег" },
-  { id: "start", name: "Предзагрузка", max: 3, cost: l => [120, 260, 500][l], d: l => "Начинаешь забег с " + l + " апгрейдом(ами)" },
   { id: "luck", name: "Радар", max: 3, cost: l => [110, 240, 450][l], d: l => "+" + (l * 5) + "% шанс элитного врага с сундуком" },
   { id: "revive", name: "Резервная копия", max: 1, cost: () => 650, d: () => "Один раз за забег поднимает с 50% здоровья" },
   { id: "reroll", name: "Реролл", max: 3, cost: l => [120, 260, 480][l], d: l => l + " переброса набора карт за забег" },
@@ -1759,7 +1831,6 @@ const CHEST_FAST = 25;
 const CHEST_GOLD_EVERY = 4;   // каждый четвёртый сундук — золотой
 const WAVE_EVERY = 120;       // большая волна раз в две минуты
 const WAVE_WARN = 2.5;        // столько секунд предупреждаем до её выхода
-const ENDLESS_BOSS_EVERY = 150; // после финала боссы приходят по кругу раз в 2.5 минуты
 const RUSH_PER_KILL = 0.025;  // +2.5% скорости за врага, убитого активным навыком…
 const RUSH_CAP = 0.3;         // …не выше +30%…
 const RUSH_TIME = 1;          // …держится секунду после каста…
@@ -1798,7 +1869,7 @@ const g = {
   /* арена забега: свой набор врагов, боссов и палитра пола */
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
-  endless: false, endlessT: 0, endlessIdx: 0,
+  endless: false, hyper: false, cycle: 0,
   runQuests: 0, firstHit: -1, achT: 0
 };
 const scratch = [];
@@ -1854,6 +1925,10 @@ function recalc(p) {
   p.luck = L("luck") * 0.06 + metaLvl("luck") * 0.05 + (m.luck || 0);
   p.areaMul *= (m.area || 1);
   p.dashCdMax = Math.max(0.7, 2.2 - metaLvl("dash") * 0.45);
+  /* Ульта — единственное, что не качается картами дальше пятого уровня,
+     и к поздней игре она проседала на фоне оружия. Поэтому её урон растёт
+     вместе с уровнем персонажа: +2% за уровень, потолок ×2.5 (75-й уровень). */
+  p.ultMul = Math.min(2.5, 1 + (p.level - 1) * 0.02);
   const newMax = p.baseHp + L("heart") * 22;
   if (newMax !== p.maxHp) { const d = newMax - p.maxHp; p.maxHp = newMax; if (d > 0) p.hp += d; }
   p.hp = Math.min(p.hp, p.maxHp);
@@ -1865,13 +1940,23 @@ function arenaUnlocked(i) {
   if (i <= 0) return true;
   return save.arenaDone.indexOf(ARENAS[i - 1].id) >= 0;
 }
+function arenaMods(id) {
+  const m = save.mods[id];
+  return { hyper: !!(m && m.hyper), endless: !!(m && m.endless) };
+}
+/* модификатор можно включить только на уже пройденной арене */
+function modsAllowed(i) { return save.arenaDone.indexOf(ARENAS[i].id) >= 0; }
 function setArena(i) {
   if (!(i >= 0 && i < ARENAS.length) || !arenaUnlocked(i)) i = 0;
   g.arena = i;
   g.arenaDef = ARENAS[i];
   g.roster = ARENAS[i].roster.map(id => ENEMY_BY_ID[id]).filter(Boolean);
+  const mods = modsAllowed(i) ? arenaMods(ARENAS[i].id) : { hyper: false, endless: false };
+  g.hyper = mods.hyper;
+  g.endless = mods.endless;
   const last = i === ARENAS.length - 1;
-  g.bosses = BOSSES.filter(b => b.arena === i || (b.reaper && !last));
+  /* в бесконечности Жнеца нет: он обрывает забег, а тут забег не обрывается */
+  g.bosses = BOSSES.filter(b => b.arena === i || (b.reaper && !last && !g.endless));
   g.bosses.sort((a, b) => a.t - b.t);
 }
 
@@ -1894,7 +1979,7 @@ function startRun() {
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
   g.runQuests = 0; g.firstHit = -1; g.achT = 0;
-  g.endless = false; g.endlessT = 0; g.endlessIdx = 0;
+  g.endless = false; g.hyper = false; g.cycle = 0;
   setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
@@ -1906,14 +1991,11 @@ function startRun() {
   g.cam.x = 0; g.cam.y = 0;
   save.runs++;
   writeSave();
-  /* «Предзагрузка» из мастерской — бесплатные апгрейды на старте */
-  g.pendingUps = metaLvl("start");
   g.quests = makeQuests();
   Sfx.init(); Sfx.resume();
   clearPressed();
   UI.enterPlay();
   UI.showQuestIntro();
-  if (g.pendingUps > 0) openLevelUp();
 }
 
 /* ---------- вспомогательные боевые функции (их зовёт оружие) ----------- */
@@ -1993,11 +2075,10 @@ function killEnemy(e) {
     UI.toast("★ " + e.def.name + " ПОВЕРЖЕН");
     if (e.def.reaper) { save.reaperKill = true; writeSave(); }
     if (e.def.finalBoss) {
-      /* игра пройдена — но забег не обрывается: дальше бесконечная ночь */
+      /* игра пройдена — но забег не обрывается: дальше идут круги */
       save.beaten = true;
       writeSave();
       g.endless = true;
-      g.endlessT = ENDLESS_BOSS_EVERY;
       g.shake = 40;
       UI.toast("★ ПЕРВОИСТОЧНИК УНИЧТОЖЕН");
       UI.toast("НОЧЬ ПРОДОЛЖАЕТСЯ");
@@ -2282,17 +2363,28 @@ function difficulty() {
      враги поздних арен и сами по себе бьют больнее, и полный множитель
      сверху сносил бы игрока с одного касания уже на первой минуте */
   const amDmg = 1 + (am - 1) * 0.55;
+  const H = g.hyper ? ARENA_MODS[0] : null;
+  /* круг в бесконечности: каждые 15 минут расписание начинается заново,
+     а враги приходят крепче предыдущего круга */
+  const cHp = Math.pow(CYCLE_HP, g.cycle), cDmg = Math.pow(CYCLE_DMG, g.cycle);
   return {
-    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am,
-    dmg: (1 + m * 0.32) * curseMul * amDmg,
-    spd: 1 + Math.min(0.45, m * 0.048),
-    rate: Math.min(18, 2.6 + m * 1.6)
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am * cHp * (H ? H.hp : 1),
+    dmg: (1 + m * 0.32) * curseMul * amDmg * cDmg * (H ? H.dmg : 1),
+    spd: (1 + Math.min(0.45, m * 0.048)) * (H ? H.spd : 1),
+    rate: Math.min(H ? 24 : 18, 2.6 + m * 1.6) * (H ? H.rate : 1)
   };
+}
+/* надбавка к добыче за выбранные модификаторы и пройденные круги */
+function modGreed() {
+  let mul = 1;
+  if (g.hyper) mul += ARENA_MODS[0].greed;
+  if (g.endless) mul += ARENA_MODS[1].greed + g.cycle * CYCLE_GREED;
+  return mul;
 }
 function spawnEnemy(def, x, y, forceElite) {
   if (g.enemies.length >= MAX_ENEMIES) return null;
   const d = difficulty();
-  const elite = forceElite || Math.random() < 0.045 + (g.p ? g.p.luck : 0);
+  const elite = forceElite || Math.random() < 0.045 + (g.p ? g.p.luck : 0) + (g.hyper ? ARENA_MODS[0].elite : 0);
   const e = {
     def: def, x: x, y: y, r: def.r * (elite ? 1.5 : 1), color: elite ? "#ffc23d" : def.color,
     hp: def.hp * d.hp * (elite ? 5 : 1), maxHp: def.hp * d.hp * (elite ? 5 : 1),
@@ -2385,6 +2477,16 @@ function director(dt) {
     }
   }
 
+  /* в бесконечности пятнадцатая минута всё равно закрывает арену —
+     просто без Жнеца и без остановки забега */
+  if (g.endless && !g.won && g.time >= RUN_LEN) {
+    g.won = true;
+    if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+    writeSave();
+    UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+    checkAch();
+  }
+
   /* сундук приходит по расписанию на спине отдельного элитника,
      а не сыплется с каждого — иначе билд закрывается к пятой минуте */
   if (g.time >= CHEST_FIRST) {
@@ -2403,16 +2505,30 @@ function director(dt) {
     }
   }
 
-  /* босс по расписанию */
-  if (g.bossIdx < g.bosses.length && g.time >= g.bosses[g.bossIdx].t) {
+  /* новый круг: расписание боссов начинается заново, враги крепче.
+     Включается модификатором «Бесконечность» и после финального босса. */
+  if (g.endless && g.time >= (g.cycle + 1) * RUN_LEN) {
+    g.cycle++;
+    g.bossIdx = 0;
+    g.waveT = Math.min(g.waveT, 10);
+    UI.toast("◈ КРУГ " + (g.cycle + 1) + " · ВРАГИ КРЕПЧЕ");
+    Sfx.cycle();
+    g.shake = Math.max(g.shake, 24);
+  }
+
+  /* босс по расписанию (внутри текущего круга) */
+  const cycleT = g.time - g.cycle * RUN_LEN;
+  if (g.bossIdx < g.bosses.length && cycleT >= g.bosses[g.bossIdx].t) {
     const def = g.bosses[g.bossIdx++];
     if (def.finalBoss) {
       /* финал третьей арены: ночь уже пережита, но выходит то, ради чего
          всё затевалось. Забег после его смерти не кончается. */
-      g.won = true;
-      if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
-      writeSave();
-      UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      if (!g.won) {
+        g.won = true;
+        if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+        writeSave();
+        UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      }
       spawnBoss(def);
       return;
     }
@@ -2432,16 +2548,6 @@ function director(dt) {
       return;
     }
     spawnBoss(def);
-  }
-  /* бесконечный режим: расписание кончилось, но боссы продолжают приходить
-     по кругу и с каждым разом крепче — иначе после финала нечего делать */
-  if (g.endless && !g.boss) {
-    g.endlessT -= dt;
-    if (g.endlessT <= 0) {
-      g.endlessT = ENDLESS_BOSS_EVERY;
-      const pool = g.bosses.filter(b => !b.reaper);
-      if (pool.length) spawnBoss(pool[g.endlessIdx++ % pool.length]);
-    }
   }
   if (g.boss && g.enemies.length > MAX_ENEMIES * 0.7) return;
 
@@ -2465,6 +2571,7 @@ function gainXp(v) {
     p.xp -= p.xpNext;
     p.level++;
     p.xpNext = Math.round(10 + 7 * p.level + p.level * p.level * 0.62);
+    p.ultMul = Math.min(2.5, 1 + (p.level - 1) * 0.02);
     g.pendingUps++;
   }
   if (g.pendingUps > 0 && g.state === "play") openLevelUp();
@@ -2822,7 +2929,7 @@ function endRun(won) {
   const p = g.p;
   const mins = g.time / 60;
   const base = g.gold + Math.floor(g.kills * 0.35) + Math.floor(mins * 12) + p.level * 3 + g.bonus;
-  const total = Math.max(1, Math.round(base * p.greedMul * (won ? 1.5 : 1)));
+  const total = Math.max(1, Math.round(base * p.greedMul * modGreed() * (won ? 1.5 : 1)));
   save.shards += total;
   if (g.time > save.best) save.best = g.time;
   if (g.kills > save.bestKills) save.bestKills = g.kills;
@@ -2845,7 +2952,8 @@ function endRun(won) {
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
-    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul
+    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul,
+    cycle: g.cycle, mods: modGreed()
   });
 }
 
@@ -2909,7 +3017,13 @@ function update(dt) {
     p.abRefund = 0;                          // ульта зарядом не возвращается
     p.abGap = AB_GAP;
     setSrc("ab:" + p.ability + ":ult", ab.name + " · ульта");
+    /* прибавка за уровень подмешивается в общий множитель урона на время
+       каста: так её подхватывают и колодцы, которые забирают dmgMul при
+       рождении и живут дальше сами по себе */
+    const baseDmg = p.dmgMul;
+    p.dmgMul = baseDmg * p.ultMul;
     ab.ult.cast(g, wx, wy, p.abLvl);
+    p.dmgMul = baseDmg;
     setSrc(null, "");
     UI.toast("✦ " + ab.ult.short);
   } else if (p.abCharge >= 1 && (mouse.down || keys.q || keys["й"])) {
@@ -3902,6 +4016,7 @@ const UI = {
   /* линейка забега строится один раз: расписание боссов у арены своё */
   buildTimeline() {
     const el = $("timeline");
+    this._cyc = -1;
     let h = '<i class="tfill" id="tlFill"></i>';
     this._marks = [];
     for (let i = 0; i < g.bosses.length; i++) {
@@ -3919,14 +4034,23 @@ const UI = {
   },
   syncTimeline() {
     if (!this._mEls) return;
-    this._tlFill.style.width = (clamp(g.time / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    /* в бесконечности линейка показывает текущий круг, а не весь забег */
+    const t = g.time - g.cycle * RUN_LEN;
+    this._tlFill.style.width = (clamp(t / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    if (g.cycle !== this._cyc) {
+      this._cyc = g.cycle;
+      const tag = $("cycTag");
+      tag.hidden = g.cycle < 1;
+      tag.textContent = "КРУГ " + (g.cycle + 1);
+      this._tlNext = -2;                        // после смены круга метки пересчитываем
+    }
     /* классы трогаем только когда ближайший босс сменился */
     let next = -1;
-    for (let i = 0; i < this._marks.length; i++) if (g.time < this._marks[i].t) { next = i; break; }
+    for (let i = 0; i < this._marks.length; i++) if (t < this._marks[i].t) { next = i; break; }
     if (next === this._tlNext) return;
     this._tlNext = next;
     for (let i = 0; i < this._mEls.length; i++) {
-      this._mEls[i].classList.toggle("past", g.time >= this._marks[i].t);
+      this._mEls[i].classList.toggle("past", t >= this._marks[i].t);
       this._mEls[i].classList.toggle("next", i === next);
     }
   },
@@ -3980,6 +4104,7 @@ const UI = {
         ["Добыча", "×" + p.greedMul.toFixed(2)],
         ["Опыт", "×" + p.xpMul.toFixed(2)],
         ["Снарядов", "+" + p.countBonus],
+        ["Урон ульты", "×" + p.ultMul.toFixed(2)],
         ["Удача", "+" + pct(p.luck)]
       ];
       $("pauseStats").innerHTML = rows.map(r => "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
@@ -4062,26 +4187,54 @@ const UI = {
     ARENAS.forEach((ar, i) => {
       const open = arenaUnlocked(i);
       const done = save.arenaDone.indexOf(ar.id) >= 0;
-      const el = document.createElement("button");
+      const mods = arenaMods(ar.id);
+      const anyMod = done && (mods.hyper || mods.endless);
+      /* карточка — div, а не button: внутри живут свои кнопки-галочки,
+         а кнопка в кнопке ломает и разметку, и клавиатуру */
+      const el = document.createElement("div");
       el.className = "arena" + (open ? "" : " lock") + (done ? " done" : "") +
-        (save.arena === i && open ? " sel" : "");
+        (anyMod ? " modded" : "") + (save.arena === i && open ? " sel" : "");
       el.style.setProperty("--ac", ar.accent);
+      if (open) { el.tabIndex = 0; el.setAttribute("role", "button"); }
       const mobs = ar.roster.slice(0, 4).map(id => ENEMY_BY_ID[id])
         .filter(Boolean).map(d => '<i style="color:' + d.color + '"></i>').join("");
       const last = i === ARENAS.length - 1;
+      /* галочки появляются только на пройденной арене */
+      const modBox = !done ? "" : '<span class="amods">' + ARENA_MODS.map(m =>
+        '<button class="mod' + (mods[m.id] ? " on" : "") + '" data-m="' + m.id +
+        '" title="' + m.d + '"><span class="box"></span><b>' + m.short + "</b>" + m.name +
+        "</button>").join("") + "</span>";
+      const hint = anyMod ? '<span class="modhint">' +
+        ARENA_MODS.filter(m => mods[m.id]).map(m => m.short + " " + m.d).join("<br>") + "</span>" : "";
       el.innerHTML =
         '<span class="tag">' + ar.tag + "</span>" +
         '<span class="nm">' + ar.name + "</span>" +
         '<span class="ds">' + (open ? ar.d : "Закрой «" + ARENAS[i - 1].name + "», чтобы попасть сюда.") + "</span>" +
-        '<span class="mt"><span>Сложность <b>×' + ar.mult.toFixed(2) + "</b></span>" +
+        '<span class="mt"><span>Сложность <b>×' + (ar.mult * (mods.hyper && done ? ARENA_MODS[0].hp : 1)).toFixed(2) + "</b></span>" +
         "<span>Боссов <b>" + BOSSES.filter(b => b.arena === i).length + "</b></span>" +
-        "<span>" + (last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
-        '<span class="prev">' + mobs + "</span></span>";
-      if (open) el.addEventListener("click", () => this.pickArena(i));
+        "<span>" + (mods.endless && done ? "<b>Без Жнеца</b>" : last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
+        '<span class="prev">' + mobs + "</span></span>" + modBox + hint;
+      if (done) el.querySelectorAll(".mod").forEach(b => b.addEventListener("click", e => {
+        e.stopPropagation();                    // щелчок по галочке не стартует арену
+        this.toggleMod(ar.id, b.dataset.m);
+      }));
+      if (open) {
+        el.addEventListener("click", () => this.pickArena(i));
+        el.addEventListener("keydown", e => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.pickArena(i); }
+        });
+      }
       row.appendChild(el);
     });
     this.show("arena");
     setTimeout(() => { const b = row.querySelector(".arena:not(.lock)"); if (b) b.focus(); }, 30);
+  },
+  toggleMod(arenaId, modId) {
+    const cur = save.mods[arenaId] || (save.mods[arenaId] = {});
+    cur[modId] = !cur[modId];
+    writeSave();
+    Sfx.init(); Sfx.resume(); Sfx.pick();
+    this.showArenas();
   },
   pickArena(i) {
     if (!arenaUnlocked(i)) return;
@@ -4092,14 +4245,52 @@ const UI = {
   },
 
   /* ---- достижения ---- */
+  achFilter: { st: "all", rar: -1 },
+  buildAchFilters() {
+    const f = this.achFilter;
+    const got = id => save.ach.indexOf(id) >= 0;
+    const nGot = ACHIEVEMENTS.filter(a => got(a.id)).length;
+    let h = "";
+    const btn = (key, val, label, count, color) =>
+      '<button data-k="' + key + '" data-v="' + val + '"' +
+      (f[key] === val ? ' class="on"' : "") +
+      (color ? ' style="--rr:' + color + '"' : "") + ">" + label +
+      (count == null ? "" : "<i>" + count + "</i>") + "</button>";
+    h += btn("st", "all", "Все", ACHIEVEMENTS.length);
+    h += btn("st", "got", "Получено", nGot);
+    h += btn("st", "left", "Закрыто", ACHIEVEMENTS.length - nGot);
+    h += '<span class="sep"></span>';
+    h += btn("rar", -1, "Любая");
+    ACH_RARITY.forEach((r, i) =>
+      h += btn("rar", i, r.name, ACHIEVEMENTS.filter(a => a.rar === i).length, r.color));
+    $("achFilters").innerHTML = h;
+    $("achFilters").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.k;
+      f[k] = k === "rar" ? +b.dataset.v : b.dataset.v;
+      Sfx.init(); Sfx.resume(); Sfx.pick();
+      this.buildAch();
+    }));
+  },
   buildAch() {
     const grid = $("achGrid");
+    this.buildAchFilters();
+    const f = this.achFilter;
     /* сначала полученные, дальше по редкости — список читается как витрина */
     const list = ACHIEVEMENTS.slice().sort((a, b) => {
       const ga = save.ach.indexOf(a.id) >= 0, gb = save.ach.indexOf(b.id) >= 0;
       if (ga !== gb) return ga ? -1 : 1;
       return a.rar - b.rar;
+    }).filter(a => {
+      const got = save.ach.indexOf(a.id) >= 0;
+      if (f.st === "got" && !got) return false;
+      if (f.st === "left" && got) return false;
+      return f.rar < 0 || a.rar === f.rar;
     });
+    if (!list.length) {
+      grid.innerHTML = '<div class="none">Под этот фильтр ничего не подходит.</div>';
+      $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
+      return;
+    }
     grid.innerHTML = list.map(a => {
       const got = save.ach.indexOf(a.id) >= 0;
       const r = ACH_RARITY[a.rar];
@@ -4240,6 +4431,8 @@ const UI = {
       ["Премия за задания", s.quests],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
+    if (s.cycle > 0) rows.splice(1, 0, ["Кругов пройдено", s.cycle]);
+    if (s.mods > 1.001) rows.push(["Модификаторы арены", "×" + s.mods.toFixed(2)]);
     if (won) rows.push(["Бонус за победу", "×1.50"]);
     let h = "";
     for (const r of rows) h += '<div class="l">' + r[0] + '</div><div class="v">' + r[1] + "</div>";
@@ -4532,7 +4725,7 @@ function frame(t) {
   hotkeys();
   if (g.state === "play" && g.p) {
     update(dt);
-    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1));
+    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1), g.arenaDef && g.arenaDef.music);
     UI.syncHud();
   }
   render();

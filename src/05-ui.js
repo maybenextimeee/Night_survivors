@@ -101,6 +101,7 @@ const UI = {
   /* линейка забега строится один раз: расписание боссов у арены своё */
   buildTimeline() {
     const el = $("timeline");
+    this._cyc = -1;
     let h = '<i class="tfill" id="tlFill"></i>';
     this._marks = [];
     for (let i = 0; i < g.bosses.length; i++) {
@@ -118,14 +119,23 @@ const UI = {
   },
   syncTimeline() {
     if (!this._mEls) return;
-    this._tlFill.style.width = (clamp(g.time / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    /* в бесконечности линейка показывает текущий круг, а не весь забег */
+    const t = g.time - g.cycle * RUN_LEN;
+    this._tlFill.style.width = (clamp(t / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    if (g.cycle !== this._cyc) {
+      this._cyc = g.cycle;
+      const tag = $("cycTag");
+      tag.hidden = g.cycle < 1;
+      tag.textContent = "КРУГ " + (g.cycle + 1);
+      this._tlNext = -2;                        // после смены круга метки пересчитываем
+    }
     /* классы трогаем только когда ближайший босс сменился */
     let next = -1;
-    for (let i = 0; i < this._marks.length; i++) if (g.time < this._marks[i].t) { next = i; break; }
+    for (let i = 0; i < this._marks.length; i++) if (t < this._marks[i].t) { next = i; break; }
     if (next === this._tlNext) return;
     this._tlNext = next;
     for (let i = 0; i < this._mEls.length; i++) {
-      this._mEls[i].classList.toggle("past", g.time >= this._marks[i].t);
+      this._mEls[i].classList.toggle("past", t >= this._marks[i].t);
       this._mEls[i].classList.toggle("next", i === next);
     }
   },
@@ -179,6 +189,7 @@ const UI = {
         ["Добыча", "×" + p.greedMul.toFixed(2)],
         ["Опыт", "×" + p.xpMul.toFixed(2)],
         ["Снарядов", "+" + p.countBonus],
+        ["Урон ульты", "×" + p.ultMul.toFixed(2)],
         ["Удача", "+" + pct(p.luck)]
       ];
       $("pauseStats").innerHTML = rows.map(r => "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
@@ -261,26 +272,54 @@ const UI = {
     ARENAS.forEach((ar, i) => {
       const open = arenaUnlocked(i);
       const done = save.arenaDone.indexOf(ar.id) >= 0;
-      const el = document.createElement("button");
+      const mods = arenaMods(ar.id);
+      const anyMod = done && (mods.hyper || mods.endless);
+      /* карточка — div, а не button: внутри живут свои кнопки-галочки,
+         а кнопка в кнопке ломает и разметку, и клавиатуру */
+      const el = document.createElement("div");
       el.className = "arena" + (open ? "" : " lock") + (done ? " done" : "") +
-        (save.arena === i && open ? " sel" : "");
+        (anyMod ? " modded" : "") + (save.arena === i && open ? " sel" : "");
       el.style.setProperty("--ac", ar.accent);
+      if (open) { el.tabIndex = 0; el.setAttribute("role", "button"); }
       const mobs = ar.roster.slice(0, 4).map(id => ENEMY_BY_ID[id])
         .filter(Boolean).map(d => '<i style="color:' + d.color + '"></i>').join("");
       const last = i === ARENAS.length - 1;
+      /* галочки появляются только на пройденной арене */
+      const modBox = !done ? "" : '<span class="amods">' + ARENA_MODS.map(m =>
+        '<button class="mod' + (mods[m.id] ? " on" : "") + '" data-m="' + m.id +
+        '" title="' + m.d + '"><span class="box"></span><b>' + m.short + "</b>" + m.name +
+        "</button>").join("") + "</span>";
+      const hint = anyMod ? '<span class="modhint">' +
+        ARENA_MODS.filter(m => mods[m.id]).map(m => m.short + " " + m.d).join("<br>") + "</span>" : "";
       el.innerHTML =
         '<span class="tag">' + ar.tag + "</span>" +
         '<span class="nm">' + ar.name + "</span>" +
         '<span class="ds">' + (open ? ar.d : "Закрой «" + ARENAS[i - 1].name + "», чтобы попасть сюда.") + "</span>" +
-        '<span class="mt"><span>Сложность <b>×' + ar.mult.toFixed(2) + "</b></span>" +
+        '<span class="mt"><span>Сложность <b>×' + (ar.mult * (mods.hyper && done ? ARENA_MODS[0].hp : 1)).toFixed(2) + "</b></span>" +
         "<span>Боссов <b>" + BOSSES.filter(b => b.arena === i).length + "</b></span>" +
-        "<span>" + (last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
-        '<span class="prev">' + mobs + "</span></span>";
-      if (open) el.addEventListener("click", () => this.pickArena(i));
+        "<span>" + (mods.endless && done ? "<b>Без Жнеца</b>" : last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
+        '<span class="prev">' + mobs + "</span></span>" + modBox + hint;
+      if (done) el.querySelectorAll(".mod").forEach(b => b.addEventListener("click", e => {
+        e.stopPropagation();                    // щелчок по галочке не стартует арену
+        this.toggleMod(ar.id, b.dataset.m);
+      }));
+      if (open) {
+        el.addEventListener("click", () => this.pickArena(i));
+        el.addEventListener("keydown", e => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.pickArena(i); }
+        });
+      }
       row.appendChild(el);
     });
     this.show("arena");
     setTimeout(() => { const b = row.querySelector(".arena:not(.lock)"); if (b) b.focus(); }, 30);
+  },
+  toggleMod(arenaId, modId) {
+    const cur = save.mods[arenaId] || (save.mods[arenaId] = {});
+    cur[modId] = !cur[modId];
+    writeSave();
+    Sfx.init(); Sfx.resume(); Sfx.pick();
+    this.showArenas();
   },
   pickArena(i) {
     if (!arenaUnlocked(i)) return;
@@ -291,14 +330,52 @@ const UI = {
   },
 
   /* ---- достижения ---- */
+  achFilter: { st: "all", rar: -1 },
+  buildAchFilters() {
+    const f = this.achFilter;
+    const got = id => save.ach.indexOf(id) >= 0;
+    const nGot = ACHIEVEMENTS.filter(a => got(a.id)).length;
+    let h = "";
+    const btn = (key, val, label, count, color) =>
+      '<button data-k="' + key + '" data-v="' + val + '"' +
+      (f[key] === val ? ' class="on"' : "") +
+      (color ? ' style="--rr:' + color + '"' : "") + ">" + label +
+      (count == null ? "" : "<i>" + count + "</i>") + "</button>";
+    h += btn("st", "all", "Все", ACHIEVEMENTS.length);
+    h += btn("st", "got", "Получено", nGot);
+    h += btn("st", "left", "Закрыто", ACHIEVEMENTS.length - nGot);
+    h += '<span class="sep"></span>';
+    h += btn("rar", -1, "Любая");
+    ACH_RARITY.forEach((r, i) =>
+      h += btn("rar", i, r.name, ACHIEVEMENTS.filter(a => a.rar === i).length, r.color));
+    $("achFilters").innerHTML = h;
+    $("achFilters").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.k;
+      f[k] = k === "rar" ? +b.dataset.v : b.dataset.v;
+      Sfx.init(); Sfx.resume(); Sfx.pick();
+      this.buildAch();
+    }));
+  },
   buildAch() {
     const grid = $("achGrid");
+    this.buildAchFilters();
+    const f = this.achFilter;
     /* сначала полученные, дальше по редкости — список читается как витрина */
     const list = ACHIEVEMENTS.slice().sort((a, b) => {
       const ga = save.ach.indexOf(a.id) >= 0, gb = save.ach.indexOf(b.id) >= 0;
       if (ga !== gb) return ga ? -1 : 1;
       return a.rar - b.rar;
+    }).filter(a => {
+      const got = save.ach.indexOf(a.id) >= 0;
+      if (f.st === "got" && !got) return false;
+      if (f.st === "left" && got) return false;
+      return f.rar < 0 || a.rar === f.rar;
     });
+    if (!list.length) {
+      grid.innerHTML = '<div class="none">Под этот фильтр ничего не подходит.</div>';
+      $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
+      return;
+    }
     grid.innerHTML = list.map(a => {
       const got = save.ach.indexOf(a.id) >= 0;
       const r = ACH_RARITY[a.rar];
@@ -439,6 +516,8 @@ const UI = {
       ["Премия за задания", s.quests],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
+    if (s.cycle > 0) rows.splice(1, 0, ["Кругов пройдено", s.cycle]);
+    if (s.mods > 1.001) rows.push(["Модификаторы арены", "×" + s.mods.toFixed(2)]);
     if (won) rows.push(["Бонус за победу", "×1.50"]);
     let h = "";
     for (const r of rows) h += '<div class="l">' + r[0] + '</div><div class="v">' + r[1] + "</div>";
@@ -731,7 +810,7 @@ function frame(t) {
   hotkeys();
   if (g.state === "play" && g.p) {
     update(dt);
-    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1));
+    Sfx.music(dt, clamp(g.time / RUN_LEN, 0, 1), g.arenaDef && g.arenaDef.music);
     UI.syncHud();
   }
   render();

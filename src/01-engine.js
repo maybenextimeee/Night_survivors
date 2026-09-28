@@ -150,23 +150,31 @@ const Sfx = {
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
   ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
+  cycle() {
+    this.seq([0, 1, 2], 150, n => this.blip(220 / Math.pow(1.22, n), 0.6, "sawtooth", 0.14, -30));
+    this.noise(1.1, 0.16, 300);
+  },
   ultReady() { this.blip(1420, 0.07, "triangle", 0.055, 120); setTimeout(() => this.blip(2130, 0.09, "triangle", 0.05, 160), 70); },
   empty() { this.blip(220, 0.06, "square", 0.03, -70); },
   die() { this.seq([0, 1, 2, 3, 4], 130, (n) => this.blip(360 / (1 + n * 0.35), 0.34, "sawtooth", 0.15, -70)); },
   win() { this.seq([0, 4, 7, 12, 16, 19], 140, (n) => this.blip(330 * Math.pow(2, n / 12), 0.5, "triangle", 0.12)); },
   /* фон: медленное басовое остинато, слои добавляются по мере накала */
-  music(dt, intensity) {
+  /* тональность, лад и темп приходят от арены — см. ARENAS[].music */
+  music(dt, intensity, m) {
     if (!this.ctx || !this.on) return;
     this.timer -= dt;
     if (this.timer > 0) return;
-    const beat = 0.34;
+    const beat = (m && m.beat) || 0.34;
     this.timer = beat;
-    const root = 55, scale = [0, 3, 5, 7, 10, 12, 15];
+    const root = (m && m.root) || 55;
+    const scale = (m && m.scale) || [0, 3, 5, 7, 10, 12, 15];
+    const wave = (m && m.wave) || "sawtooth";
+    const lead = (m && m.lead) || "square";
     const s = this.step++;
-    if (s % 4 === 0) this.blip(root * Math.pow(2, (s % 32 < 16 ? 0 : 3) / 12), beat * 2.4, "sawtooth", 0.1, 0, this.musicGain);
+    if (s % 4 === 0) this.blip(root * Math.pow(2, (s % 32 < 16 ? 0 : 3) / 12), beat * 2.4, wave, 0.1, 0, this.musicGain);
     if (s % 2 === 0) this.noise(0.04, 0.02 + intensity * 0.015, 6000);
     if (intensity > 0.25 && s % 4 === 2)
-      this.blip(root * 4 * Math.pow(2, scale[(s * 3) % scale.length] / 12), beat * 0.8, "square", 0.03, 0, this.musicGain);
+      this.blip(root * 4 * Math.pow(2, scale[(s * 3) % scale.length] / 12), beat * 0.8, lead, 0.03, 0, this.musicGain);
     if (intensity > 0.6 && s % 8 === 5)
       this.blip(root * 8 * Math.pow(2, scale[(s * 5) % scale.length] / 12), beat * 0.5, "triangle", 0.025, 0, this.musicGain);
   }
@@ -181,6 +189,8 @@ const defaultSave = () => ({
   unlocked: [], total: DEF_TOTAL(),
   /* арены: какая выбрана и какие уже закрыты (дошёл до 15:00) */
   arena: 0, arenaDone: [], beaten: false,
+  /* модификаторы по аренам: { quarter: { hyper: true, endless: false }, … } */
+  mods: {},
   /* достижения и список уже собранных эволюций — по ним считаются ачивки */
   ach: [], evoSeen: []
 });
@@ -197,6 +207,7 @@ function loadSave() {
   if (!save.total || typeof save.total !== "object") save.total = DEF_TOTAL();
   else save.total = Object.assign(DEF_TOTAL(), save.total);
   if (!Array.isArray(save.arenaDone)) save.arenaDone = [];
+  if (!save.mods || typeof save.mods !== "object") save.mods = {};
   if (!Array.isArray(save.ach)) save.ach = [];
   if (!Array.isArray(save.evoSeen)) save.evoSeen = [];
   if (typeof save.arena !== "number") save.arena = 0;
