@@ -22,7 +22,7 @@ jobs:
     name: Собрать из src/
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # build.ps1 склеивает src/*.js и src/00-shell.html в index.html.
       # PowerShell Core уже стоит на раннере, ставить ничего не нужно.
