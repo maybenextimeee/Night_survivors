@@ -19,11 +19,17 @@ $head = @'
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 15 минут в неоновом квартале.">
+<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 30 минут в неоновом квартале.">
 </head>
 <body>
 '@
 $page = $head + "`r`n" + $body + "`r`n</body>`r`n</html>`r`n"
+
+# Переводы строк приводим к LF: git хранит файлы именно так, и иначе
+# собранный index.html вечно выглядел бы изменённым — и на твоей машине,
+# и в проверке на раннере.
+$body = $body -replace "`r`n", "`n"
+$page = $page -replace "`r`n", "`n"
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText((Join-Path $root "nightshift.html"), $body, $utf8)

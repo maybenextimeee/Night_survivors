@@ -1,0 +1,12 @@
+# промежуточный файл сборки: тело страницы без обёртки <html>
+nightshift.html
+
+# служебные папки инструментов
+.claude/
+.vscode/
+.idea/
+
+# мусор операционных систем
+Thumbs.db
+desktop.ini
+.DS_Store

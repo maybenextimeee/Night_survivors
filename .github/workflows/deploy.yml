@@ -1,0 +1,63 @@
+name: Сборка и публикация
+
+# Запускается при каждом пуше в main и по кнопке «Run workflow» на вкладке Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Права, которые нужны шагу публикации на GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Если пушей несколько подряд — публикуется только последний.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Собрать из src/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # build.ps1 склеивает src/*.js и src/00-shell.html в index.html.
+      # PowerShell Core уже стоит на раннере, ставить ничего не нужно.
+      - name: Собрать index.html
+        shell: pwsh
+        run: ./build.ps1
+
+      # index.html лежит в репозитории, чтобы игру можно было открыть с диска.
+      # Если он отстал от src/, сайт всё равно уедет свежий — но напомним,
+      # что локальная копия устарела.
+      - name: Сверить index.html в репозитории со сборкой
+        shell: pwsh
+        run: |
+          if (git status --porcelain index.html) {
+            Write-Output "::warning::index.html в репозитории отстал от src/. Запусти build.ps1 и закоммить — иначе файл с диска будет старее сайта."
+          } else {
+            Write-Output "index.html в репозитории совпадает со свежей сборкой."
+          }
+
+      - name: Собрать папку сайта
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Опубликовать на Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
