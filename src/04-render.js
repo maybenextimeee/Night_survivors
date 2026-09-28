@@ -35,15 +35,17 @@ function orbSprite(c, x, y, r, color, rot) {
 
 /* фон: две сетки с разным шагом — даёт ощущение движения по цеху */
 function drawFloor(camX, camY) {
+  /* палитра пола приходит от арены: квартал синий, цех рыжий, ядро сиреневое */
+  const ar = g.arenaDef || ARENAS[0];
   const grd = ctx.createLinearGradient(0, 0, 0, VH);
-  grd.addColorStop(0, "#0a0e1a");
-  grd.addColorStop(1, "#05070e");
+  grd.addColorStop(0, ar.floor[0]);
+  grd.addColorStop(1, ar.floor[1]);
   ctx.fillStyle = grd;
   ctx.fillRect(0, 0, VW, VH);
 
   const draw = (step, alpha, width) => {
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = "#2a3e63";
+    ctx.strokeStyle = ar.grid;
     ctx.lineWidth = width;
     ctx.beginPath();
     const ox = -(camX % step) - step, oy = -(camY % step) - step;
@@ -401,7 +403,7 @@ function render() {
   }
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.drawImage(glow(p.hitFlash > 0 ? "#ff2f6e" : "#3ee8ff", 32), p.x - 46, p.y - 46, 92, 92);
+  ctx.drawImage(glow(p.hitFlash > 0 ? "#ff2f6e" : "#3ee8ff", 32), p.x - 37, p.y - 37, 74, 74);
   ctx.restore();
   /* блик готовности: вспыхивает, разрастается и гаснет; у ульты — сильнее */
   let shipAlpha = 1;
@@ -431,9 +433,9 @@ function render() {
     ctx.translate(p.x, p.y); ctx.rotate(p.face);
     ctx.fillStyle = p.hitFlash > 0 ? "#ff2f6e" : "#0d1220";
     ctx.strokeStyle = p.hitFlash > 0 ? "#fff" : "#7df1ff";
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(15, 0); ctx.lineTo(-8, 9); ctx.lineTo(-4, 0); ctx.lineTo(-8, -9);
+    ctx.moveTo(12, 0); ctx.lineTo(-6.4, 7.2); ctx.lineTo(-3.2, 0); ctx.lineTo(-6.4, -7.2);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
   }

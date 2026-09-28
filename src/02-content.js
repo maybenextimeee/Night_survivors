@@ -540,30 +540,159 @@ const ENEMIES = [
   { id: "brute", name: "Дробила", hp: 195, spd: 49, dmg: 24, r: 20, xp: 5, color: "#a86bff", shape: 6, from: 140, w: 4 },
   { id: "shooter", name: "Плевок", hp: 62, spd: 53, dmg: 14, r: 12, xp: 3, color: "#ff5fa8", shape: 5, from: 200, w: 4, ranged: 300, fire: 2.1 },
   { id: "swarm", name: "Мошка", hp: 16, spd: 113, dmg: 7, r: 7, xp: 1, color: "#b6ff3d", shape: 3, from: 280, w: 6, pack: 10 },
-  { id: "ghost", name: "Тень", hp: 122, spd: 93, dmg: 19, r: 14, xp: 4, color: "#7f8cff", shape: 4, from: 380, w: 5, phase: true }
+  { id: "ghost", name: "Тень", hp: 122, spd: 93, dmg: 19, r: 14, xp: 4, color: "#7f8cff", shape: 4, from: 380, w: 5, phase: true },
+
+  /* --- обитатели второй арены: литейный цех --- */
+  { id: "slag", name: "Шлак", hp: 46, spd: 62, dmg: 14, r: 13, xp: 2, color: "#ff9a3c", shape: 5, from: 0, w: 9 },
+  { id: "welder", name: "Сварщик", hp: 88, spd: 74, dmg: 17, r: 12, xp: 3, color: "#ffd166", shape: 3, from: 90, w: 6 },
+  { id: "hulk", name: "Ковш", hp: 320, spd: 38, dmg: 30, r: 24, xp: 9, color: "#ff6b3d", shape: 6, from: 170, w: 3 },
+  { id: "spitter", name: "Литейщик", hp: 96, spd: 44, dmg: 16, r: 13, xp: 4, color: "#ff4d6d", shape: 5, from: 220, w: 4, ranged: 320, fire: 1.8 },
+
+  /* --- обитатели третьей арены: ядро сети --- */
+  { id: "shard", name: "Осколок", hp: 70, spd: 128, dmg: 16, r: 9, xp: 2, color: "#7df1ff", shape: 4, from: 0, w: 8 },
+  { id: "warden", name: "Ключник", hp: 410, spd: 46, dmg: 34, r: 22, xp: 11, color: "#c77dff", shape: 6, from: 120, w: 4 },
+  { id: "glitch", name: "Сбой", hp: 150, spd: 104, dmg: 22, r: 13, xp: 5, color: "#ff2fd0", shape: 3, from: 90, w: 6, phase: true },
+  { id: "turret", name: "Ретранслятор", hp: 180, spd: 30, dmg: 20, r: 15, xp: 6, color: "#ff5fa8", shape: 5, from: 200, w: 4, ranged: 360, fire: 1.5 }
 ];
+const ENEMY_BY_ID = {};
+ENEMIES.forEach(e => { ENEMY_BY_ID[e.id] = e; });
 
 const BOSSES = [
+  /* --- арена 1: неоновый квартал --- */
   {
-    t: 240, name: "НАДЗИРАТЕЛЬ", hp: 2500, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
+    arena: 0, t: 240, name: "НАДЗИРАТЕЛЬ", hp: 2500, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
     ai: (g, e, dt) => { bossRadial(g, e, dt, 3.6, 12, 210); bossCharge(g, e, dt, 5.5, 430); }
   },
   {
-    t: 480, name: "ПОЖИРАТЕЛЬ", hp: 7000, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
+    arena: 0, t: 480, name: "ПОЖИРАТЕЛЬ", hp: 7000, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.13, 240); bossSummon(g, e, dt, 6, 5); bossCharge(g, e, dt, 7, 420); }
   },
   {
-    t: 720, name: "ПОЛНОЧЬ", hp: 15000, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
+    arena: 0, t: 720, name: "ПОЛНОЧЬ", hp: 15000, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.1, 265); bossRadial(g, e, dt, 4.2, 22, 200); bossSummon(g, e, dt, 7, 7); bossCharge(g, e, dt, 5.2, 470); }
   },
-  /* Жнец: приходит на пятнадцатой минуте, когда забег уже засчитан.
-     Здоровье у него есть, но убить его — задача для безумного билда;
-     касание убивает наповал, броня не спасает. */
+
+  /* --- арена 2: литейный цех --- */
   {
-    t: 900, name: "ЖНЕЦ", hp: 160000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
+    arena: 1, t: 240, name: "ДОМЕННАЯ", hp: 3400, r: 44, spd: 50, dmg: 30, xp: 70, color: "#ff8a3c", shards: 55,
+    ai: (g, e, dt) => { bossRadial(g, e, dt, 3, 14, 230); bossCharge(g, e, dt, 5, 460); }
+  },
+  {
+    arena: 1, t: 480, name: "КОВШЕВОЙ", hp: 9500, r: 56, spd: 44, dmg: 36, xp: 170, color: "#ff8a3c", shards: 120,
+    ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.11, 260); bossSummon(g, e, dt, 5.5, 6); bossCharge(g, e, dt, 6, 450); }
+  },
+  {
+    arena: 1, t: 720, name: "РАЗЛИВЩИК", hp: 20000, r: 64, spd: 52, dmg: 46, xp: 460, color: "#ff8a3c", shards: 340,
+    ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.09, 280); bossRadial(g, e, dt, 3.6, 24, 215); bossSummon(g, e, dt, 6, 8); bossCharge(g, e, dt, 4.6, 500); }
+  },
+
+  /* --- арена 3: ядро сети --- */
+  {
+    arena: 2, t: 240, name: "БРАНДМАУЭР", hp: 4600, r: 46, spd: 54, dmg: 34, xp: 85, color: "#c77dff", shards: 75,
+    ai: (g, e, dt) => { bossRadial(g, e, dt, 2.7, 16, 250); bossCharge(g, e, dt, 4.6, 490); }
+  },
+  {
+    arena: 2, t: 480, name: "ДЕМОН СЕТИ", hp: 13000, r: 58, spd: 48, dmg: 42, xp: 210, color: "#c77dff", shards: 160,
+    ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.09, 280); bossSummon(g, e, dt, 5, 7); bossCharge(g, e, dt, 5.5, 480); }
+  },
+  {
+    arena: 2, t: 720, name: "АРХИВАРИУС", hp: 27000, r: 66, spd: 54, dmg: 52, xp: 560, color: "#c77dff", shards: 430,
+    ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.08, 300); bossRadial(g, e, dt, 3.2, 26, 230); bossSummon(g, e, dt, 5.5, 9); bossCharge(g, e, dt, 4.2, 520); }
+  },
+  /* финальный босс всей игры: после него забег не кончается, а уходит в бесконечный */
+  {
+    arena: 2, t: 900, name: "ПЕРВОИСТОЧНИК", hp: 120000, r: 82, spd: 58, dmg: 70, xp: 1500,
+    color: "#ff2fd0", shards: 1500, finalBoss: true,
+    ai: (g, e, dt) => {
+      bossSpiral(g, e, dt, 0.06, 320);
+      bossRadial(g, e, dt, 2.6, 30, 250);
+      bossSummon(g, e, dt, 4.5, 10);
+      bossCharge(g, e, dt, 3.8, 560);
+    }
+  },
+
+  /* Жнец: приходит на пятнадцатой минуте первых двух арен, когда забег
+     уже засчитан. Здоровье у него есть, но убить его — задача для безумного
+     билда; касание убивает наповал, броня не спасает. */
+  {
+    arena: -1, t: 900, name: "ЖНЕЦ", hp: 160000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
     shards: 900, final: true, reaper: true,
     ai: () => { }        // ничего не стреляет — просто догоняет и снимает с одного касания
   }
+];
+
+/* --- арены --------------------------------------------------------------
+   У каждой свой набор врагов, свои боссы, палитра пола и множитель
+   сложности. Открываются по очереди: прошёл предыдущую — доступна следующая. */
+const ARENAS = [
+  {
+    id: "quarter", name: "Неоновый квартал", tag: "Начало",
+    d: "Спальный район, который в полночь остался без сети. Знакомая публика из подсетей.",
+    roster: ["crawler", "runner", "brute", "shooter", "swarm", "ghost"],
+    mult: 1, floor: ["#0a0e1a", "#05070e"], grid: "#2a3e63", accent: "#3ee8ff"
+  },
+  {
+    id: "foundry", name: "Литейный цех", tag: "Жарко",
+    d: "Старое производство под кварталом. Здесь всё раскалено, и местные крепче.",
+    roster: ["slag", "welder", "hulk", "spitter", "runner", "swarm"],
+    mult: 1.35, floor: ["#1a0c06", "#0b0503"], grid: "#7a3a16", accent: "#ff8a3c"
+  },
+  {
+    id: "core", name: "Ядро сети", tag: "Финал",
+    d: "То, откуда всё лезло. На пятнадцатой минуте выходит Первоисточник — конец истории.",
+    roster: ["shard", "warden", "glitch", "turret", "ghost", "swarm"],
+    mult: 1.8, floor: ["#0d0618", "#05030d"], grid: "#5b2a86", accent: "#c77dff"
+  }
+];
+
+/* --- достижения --------------------------------------------------------
+   Каждое проверяется по одному снимку статистики (см. achStats в 03-game.js),
+   так что порядок в списке ни на что не влияет — можно свободно добавлять.
+   rar: 0 обычное · 1 редкое · 2 эпическое · 3 легендарное                 */
+const ACH_RARITY = [
+  { name: "Обычное", color: "#8fa3c8" },
+  { name: "Редкое", color: "#3ee8ff" },
+  { name: "Эпическое", color: "#c77dff" },
+  { name: "Легендарное", color: "#ffc23d" }
+];
+const ACHIEVEMENTS = [
+  /* --- обычные: попадаются в первые же забеги --- */
+  { id: "a:first", rar: 0, ico: "blade", name: "Первый контакт", d: "Убей 100 врагов", f: s => s.kills >= 100 },
+  { id: "a:min5", rar: 0, ico: "haste", name: "Пять минут", d: "Продержись 5:00 за один забег", f: s => s.best >= 300 },
+  { id: "a:glass", rar: 0, ico: "area", name: "Бей стекло", d: "Разбей 50 неонок", f: s => s.props >= 50 },
+  { id: "a:chest", rar: 0, ico: "gold", name: "Подарок", d: "Подбери 10 сундуков", f: s => s.chests >= 10 },
+  { id: "a:lvl15", rar: 0, ico: "growth", name: "Пятнадцатый", d: "Возьми 15-й уровень", f: s => s.level >= 15 },
+  { id: "a:quest5", rar: 0, ico: "luck", name: "По заданию", d: "Выполни 5 заданий забега", f: s => s.quests >= 5 },
+
+  /* --- редкие: требуют осознанной игры --- */
+  { id: "a:min10", rar: 1, ico: "haste", name: "Десять минут", d: "Продержись 10:00 за один забег", f: s => s.best >= 600 },
+  { id: "a:boss10", rar: 1, ico: "missile", name: "Смотрящий", d: "Убей 10 боссов", f: s => s.bosses >= 10 },
+  { id: "a:evo1", rar: 1, ico: "dup", name: "Слияние", d: "Собери первую эволюцию", f: s => s.evos >= 1 },
+  { id: "a:max5", rar: 1, ico: "power", name: "До упора", d: "Выкачай 5 оружий до максимума", f: s => s.maxed >= 5 },
+  { id: "a:quest25", rar: 1, ico: "luck", name: "Исполнитель", d: "Выполни 25 заданий забега", f: s => s.quests >= 25 },
+  { id: "a:char4", rar: 1, ico: "phantom", name: "Смена состава", d: "Открой четвёртого оператора", f: s => s.chars >= 4 },
+  { id: "a:kills5k", rar: 1, ico: "shotgun", name: "Пять тысяч", d: "Убей 5 000 врагов всего", f: s => s.kills >= 5000 },
+  { id: "a:w10", rar: 1, ico: "orbit", name: "Арсенал", d: "Открой 10 видов оружия", f: s => s.weapons >= 10 },
+
+  /* --- эпические: уже надо разбираться в билдах --- */
+  { id: "a:arena1", rar: 2, ico: "armor", name: "Квартал зачищен", d: "Закрой Неоновый квартал", f: s => s.done.indexOf("quarter") >= 0 },
+  { id: "a:arena2", rar: 2, ico: "acid", name: "Цех остыл", d: "Закрой Литейный цех", f: s => s.done.indexOf("foundry") >= 0 },
+  { id: "a:evo5", rar: 2, ico: "dura", name: "Коллекционер форм", d: "Собери 5 разных эволюций", f: s => s.evos >= 5 },
+  { id: "a:lvl40", rar: 2, ico: "growth", name: "Сороковой", d: "Возьми 40-й уровень", f: s => s.level >= 40 },
+  { id: "a:metaMax", rar: 2, ico: "railgun", name: "Мастер цеха", d: "Выкачай улучшение мастерской до максимума", f: s => s.metaMax },
+  { id: "a:clean5", rar: 2, ico: "heart", name: "Ни царапины", d: "Продержись первые 5:00 забега без урона", f: s => s.clean5 },
+  { id: "a:shards50k", rar: 2, ico: "greed", name: "Скупщик", d: "Заработай 50 000 осколков всего", f: s => s.earned >= 50000 },
+  { id: "a:kills50k", rar: 2, ico: "flechette", name: "Полсотни тысяч", d: "Убей 50 000 врагов всего", f: s => s.kills >= 50000 },
+
+  /* --- легендарные: конец игры и около --- */
+  { id: "a:arena3", rar: 3, ico: "singularity", name: "Ядро вскрыто", d: "Закрой Ядро сети", f: s => s.done.indexOf("core") >= 0 },
+  { id: "a:final", rar: 3, ico: "singularity", name: "Первоисточник", d: "Убей финального босса игры", f: s => s.beaten },
+  { id: "a:evoAll", rar: 3, ico: "disc", name: "Полный набор", d: "Собери все эволюции", f: s => s.evos >= s.evoTotal },
+  { id: "a:reaper", rar: 3, ico: "ricochet", name: "Жнец жнеца", d: "Убей Жнеца", f: s => s.reaperKill },
+  { id: "a:min20", rar: 3, ico: "haste", name: "Двадцать минут", d: "Продержись 20:00 за один забег", f: s => s.best >= 1200 },
+  { id: "a:colAll", rar: 3, ico: "magnet", name: "Всё открыто", d: "Собери всю коллекцию", f: s => s.colDone },
+  { id: "a:boss100", rar: 3, ico: "missile", name: "Охотник на титанов", d: "Убей 100 боссов", f: s => s.bosses >= 100 },
+  { id: "a:cursed", rar: 3, ico: "aura", name: "Под проклятием", d: "Закрой любую арену с проклятием 3+", f: s => s.curseWin >= 3 }
 ];
 
 /* --- мастерская: постоянные улучшения ---------------------------------- */
@@ -582,7 +711,8 @@ const META = [
   { id: "reroll", name: "Реролл", max: 3, cost: l => [120, 260, 480][l], d: l => l + " переброса набора карт за забег" },
   { id: "banish", name: "Изгнание", max: 3, cost: l => [140, 300, 540][l], d: l => "Можно выкинуть " + l + " предмет(а) из набора карт за забег" },
   { id: "growth", name: "Нейролинк", max: 5, cost: l => [60, 130, 240, 400, 620][l], d: l => "+" + (l * 4) + "% опыта за забег" },
-  { id: "echo", name: "Эхо", max: 1, cost: () => 1200, d: () => "+1 снаряд всему оружию, которое считает снаряды" },
+  { id: "echo", name: "Эхо", max: 2, cost: l => [1200, 2200][l], d: l => "+" + l + (l === 1 ? " снаряд" : " снаряда") + " всему оружию со снарядами" },
+  { id: "cool", name: "Турбина", max: 3, cost: l => [150, 320, 560][l], d: l => "−" + Math.round((1 - Math.pow(0.92, l)) * 100) + "% отката всему оружию и навыку" },
   { id: "curse", name: "Проклятие", max: 4, cost: l => [90, 180, 330, 560][l], d: l => "Враги на " + (l * 12) + "% злее, но осколков на " + (l * 25) + "% больше" }
 ];
 
@@ -608,9 +738,7 @@ const RARITY_ABILITY = 55;  // вес карты прокачки активно
    Условия считаются от накопленной статистики плюс текущего забега, чтобы
    открытие прилетало сразу в бою, а не только на экране итогов.          */
 const UNLOCKS = [
-  { id: "w:chain", kind: "Оружие", name: "Дуга", cur: s => s.kills, goal: 400, text: "Убей 400 врагов" },
   { id: "p:armor", kind: "Имплант", name: "Нанопанцирь", cur: s => s.time, goal: 120, fmt: "t", text: "Продержись 2:00 за забег" },
-  { id: "w:mines", kind: "Оружие", name: "Наномины", cur: s => s.time, goal: 180, fmt: "t", text: "Продержись 3:00 за забег" },
   { id: "w:aura", kind: "Оружие", name: "Излучатель", cur: s => s.props, goal: 25, text: "Разбей 25 неонок" },
   { id: "p:greed", kind: "Имплант", name: "Дата-майнер", cur: s => s.shards, goal: 400, text: "Накопи 400 осколков" },
   { id: "w:flechette", kind: "Оружие", name: "Флешетты", cur: s => s.level, goal: 8, text: "Достигни 8 уровня" },

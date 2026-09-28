@@ -3,8 +3,9 @@ const UI = {
   screens: {
     menu: $("scrMenu"), help: $("scrHelp"), shop: $("scrShop"), chars: $("scrChars"),
     class: $("scrClass"), level: $("scrLevel"), pause: $("scrPause"), end: $("scrEnd"),
-    collection: $("scrCollection")
+    collection: $("scrCollection"), arena: $("scrArena"), ach: $("scrAch")
   },
+  achQ: [], achBusy: false,
   cards: [],
   show(name) {
     for (const k in this.screens) this.screens[k].classList.toggle("on", k === name);
@@ -22,6 +23,7 @@ const UI = {
     this.syncSkill();
     this.syncRack();
     this.buildQuests();
+    this.buildTimeline();
   },
   leavePlay() {
     $("hud").classList.remove("on");
@@ -53,6 +55,11 @@ const UI = {
     $("sKills").textContent = g.kills;
     $("sGold").textContent = g.gold;
     $("sWave").textContent = Math.floor(g.time / 60) + 1;
+    /* до следующего сундука: золотой подсвечиваем заранее, чтобы было за чем бежать */
+    const cl = chestLeft();
+    $("sChest").textContent = cl > 9.95 ? Math.ceil(cl) + " с" : cl.toFixed(1) + " с";
+    $("chestStat").classList.toggle("gold", chestGoldNext());
+    this.syncTimeline();
     const hk = clamp(p.hp / p.maxHp, 0, 1);
     const pct = (hk * 100).toFixed(2) + "%";
     $("hpFill").style.width = pct;
@@ -89,6 +96,38 @@ const UI = {
     $("skillKey").classList.toggle("rdy", p.abCharge >= 1);
     $("skillKey").textContent = p.abCharge >= 1 ? "ЛКМ" : (abCdSec(p) * (1 - p.abCharge)).toFixed(1);
     this.syncQuests();
+  },
+
+  /* линейка забега строится один раз: расписание боссов у арены своё */
+  buildTimeline() {
+    const el = $("timeline");
+    let h = '<i class="tfill" id="tlFill"></i>';
+    this._marks = [];
+    for (let i = 0; i < g.bosses.length; i++) {
+      const b = g.bosses[i];
+      const x = clamp(b.t / RUN_LEN, 0, 1) * 100;
+      const fin = b.finalBoss || b.reaper;
+      h += '<span class="bm' + (fin ? " fin" : "") + '" style="left:' + x.toFixed(2) +
+        '%" title="' + b.name + " · " + fmtTime(b.t) + '"></span>';
+      this._marks.push(b);
+    }
+    el.innerHTML = h;
+    this._mEls = el.querySelectorAll(".bm");
+    this._tlFill = $("tlFill");
+    this._tlNext = -1;
+  },
+  syncTimeline() {
+    if (!this._mEls) return;
+    this._tlFill.style.width = (clamp(g.time / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    /* классы трогаем только когда ближайший босс сменился */
+    let next = -1;
+    for (let i = 0; i < this._marks.length; i++) if (g.time < this._marks[i].t) { next = i; break; }
+    if (next === this._tlNext) return;
+    this._tlNext = next;
+    for (let i = 0; i < this._mEls.length; i++) {
+      this._mEls[i].classList.toggle("past", g.time >= this._marks[i].t);
+      this._mEls[i].classList.toggle("next", i === next);
+    }
   },
 
   /* стойка всегда показывает все слоты: занятые и пустые под рамкой */
@@ -150,20 +189,37 @@ const UI = {
   /* ---- задания забега ---- */
   questRow(q, cls) {
     const pct = Math.round(q.have / q.goal * 100);
-    return '<div class="qrow' + (q.done ? " done" : "") + (cls || "") + '" style="border-left-color:' + q.color + '">' +
+    /* полторы секунды после выполнения строка горит — это видно боковым зрением */
+    const fresh = q.done && q.doneAt != null && g.time - q.doneAt < 1.6;
+    return '<div class="qrow' + (q.done ? " done" : "") + (fresh ? " fresh" : "") + (cls || "") + '" style="border-left-color:' + q.color + '">' +
       q.icon +
       '<span class="qt"><span class="qn">' + q.label + " " + q.name + "</span>" +
       '<span class="qbar"><i style="width:' + pct + '%;background:' + q.color + '"></i></span></span>' +
       '<span class="qv">' + (q.done ? "✔" : q.have + "/" + q.goal) + "</span></div>";
   },
+  /* ключ строки включает флаг вспышки — иначе она осталась бы висеть
+     до следующего изменения прогресса */
+  qkey(q) {
+    const fresh = q.done && q.doneAt != null && g.time - q.doneAt < 1.6;
+    return q.have + "/" + q.done + "/" + (fresh ? 1 : 0);
+  },
   buildQuests() {
     if (!g.quests.length) { $("quests").innerHTML = ""; return; }
-    this._qcache = g.quests.map(q => q.have + "/" + q.done);
+    this._qcache = g.quests.map(q => this.qkey(q));
     $("quests").innerHTML = g.quests.map(q => this.questRow(q)).join("");
+  },
+  /* задание закрылось в момент, когда панель спрятана заставкой —
+     показываем её досрочно, чтобы вспышку было куда положить */
+  flashQuest() {
+    if ($("questIntro").classList.contains("on")) {
+      $("questIntro").classList.remove("on");
+      $("quests").style.opacity = "";
+    }
+    this.buildQuests();
   },
   syncQuests() {
     if (!g.quests.length) return;
-    const now = g.quests.map(q => q.have + "/" + q.done);
+    const now = g.quests.map(q => this.qkey(q));
     if (this._qcache && now.join("|") === this._qcache.join("|")) return;  // без нужды DOM не трогаем
     this.buildQuests();
   },
@@ -178,8 +234,14 @@ const UI = {
     el.classList.remove("on");
     void el.offsetWidth;                       // перезапуск анимации
     el.classList.add("on");
+    /* пока задания показываются крупно, угловая панель прячется —
+       иначе заставка наезжает на неё и обе читаются плохо */
+    $("quests").style.opacity = "0";
     clearTimeout(this._qiT);
-    this._qiT = setTimeout(() => el.classList.remove("on"), 3400);
+    this._qiT = setTimeout(() => {
+      el.classList.remove("on");
+      $("quests").style.opacity = "";
+    }, 3400);
   },
 
   syncSkill() {
@@ -190,6 +252,91 @@ const UI = {
     $("skillName").textContent = ab.name;
     $("skillPips").innerHTML = pips(p.abLvl, ab.max);
     $("ultKey").textContent = ab.ult.short + " · ПКМ";
+  },
+
+  /* ---- выбор арены ---- */
+  showArenas() {
+    const row = $("arenaRow");
+    row.innerHTML = "";
+    ARENAS.forEach((ar, i) => {
+      const open = arenaUnlocked(i);
+      const done = save.arenaDone.indexOf(ar.id) >= 0;
+      const el = document.createElement("button");
+      el.className = "arena" + (open ? "" : " lock") + (done ? " done" : "") +
+        (save.arena === i && open ? " sel" : "");
+      el.style.setProperty("--ac", ar.accent);
+      const mobs = ar.roster.slice(0, 4).map(id => ENEMY_BY_ID[id])
+        .filter(Boolean).map(d => '<i style="color:' + d.color + '"></i>').join("");
+      const last = i === ARENAS.length - 1;
+      el.innerHTML =
+        '<span class="tag">' + ar.tag + "</span>" +
+        '<span class="nm">' + ar.name + "</span>" +
+        '<span class="ds">' + (open ? ar.d : "Закрой «" + ARENAS[i - 1].name + "», чтобы попасть сюда.") + "</span>" +
+        '<span class="mt"><span>Сложность <b>×' + ar.mult.toFixed(2) + "</b></span>" +
+        "<span>Боссов <b>" + BOSSES.filter(b => b.arena === i).length + "</b></span>" +
+        "<span>" + (last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
+        '<span class="prev">' + mobs + "</span></span>";
+      if (open) el.addEventListener("click", () => this.pickArena(i));
+      row.appendChild(el);
+    });
+    this.show("arena");
+    setTimeout(() => { const b = row.querySelector(".arena:not(.lock)"); if (b) b.focus(); }, 30);
+  },
+  pickArena(i) {
+    if (!arenaUnlocked(i)) return;
+    save.arena = i;
+    writeSave();
+    Sfx.pick();
+    this.showClassPick();
+  },
+
+  /* ---- достижения ---- */
+  buildAch() {
+    const grid = $("achGrid");
+    /* сначала полученные, дальше по редкости — список читается как витрина */
+    const list = ACHIEVEMENTS.slice().sort((a, b) => {
+      const ga = save.ach.indexOf(a.id) >= 0, gb = save.ach.indexOf(b.id) >= 0;
+      if (ga !== gb) return ga ? -1 : 1;
+      return a.rar - b.rar;
+    });
+    grid.innerHTML = list.map(a => {
+      const got = save.ach.indexOf(a.id) >= 0;
+      const r = ACH_RARITY[a.rar];
+      return '<div class="achit ' + (got ? "got" : "locked") + '" style="--rar:' + r.color + '">' +
+        svg(ICONS[a.ico], got ? r.color : "#4a5573") +
+        '<span class="tx"><span class="nm">' + a.name + "</span>" +
+        '<span class="sub">' + a.d + "</span></span>" +
+        '<span class="rr">' + r.name + "</span></div>";
+    }).join("");
+    $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
+  },
+
+  /* всплывашка в углу: по одной за раз, очередь не глотается */
+  achPop(a) {
+    this.achQ.push(a);
+    this.achNext();
+  },
+  achNext() {
+    if (this.achBusy || !this.achQ.length) return;
+    const a = this.achQ.shift();
+    const r = ACH_RARITY[a.rar];
+    const el = $("achPop");
+    el.style.setProperty("--rar", r.color);
+    $("achIco").innerHTML = svg(ICONS[a.ico], r.color);
+    $("achRar").textContent = r.name + " достижение";
+    $("achName").textContent = a.name;
+    $("achDesc").textContent = a.d;
+    el.classList.remove("on");
+    void el.offsetWidth;                       // перезапуск анимации
+    el.classList.add("on");
+    this.achBusy = true;
+    Sfx.ach();
+    clearTimeout(this._achT);
+    this._achT = setTimeout(() => {
+      el.classList.remove("on");
+      this.achBusy = false;
+      this.achNext();
+    }, 4700);
   },
 
   /* выбор активной способности перед стартом забега */
@@ -332,6 +479,7 @@ const UI = {
     $("kShards").textContent = save.shards + " ◈";
     $("shopShards").textContent = save.shards + " ◈";
     $("charShards").textContent = save.shards + " ◈";
+    $("kAch").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
     $("bestTxt").textContent = save.best
       ? fmtTime(save.best) + " · " + save.bestKills + " убийств" + (save.wins ? " · забегов закрыто: " + save.wins : "")
       : "ни одного забега";
@@ -493,7 +641,11 @@ function pipsFlex(lvl, max) {
 /* ---------- кнопки ----------------------------------------------------- */
 function bind(id, fn) { $(id).addEventListener("click", fn); }
 bind("rerollBtn", () => doReroll());
-bind("bPlay", () => { Sfx.init(); Sfx.resume(); UI.showClassPick(); });
+/* перед выбором способности теперь спрашиваем арену */
+bind("bPlay", () => { Sfx.init(); Sfx.resume(); UI.showArenas(); });
+bind("bArenaBack", () => UI.show("menu"));
+bind("bAch", () => { UI.buildAch(); UI.show("ach"); });
+bind("bAchBack", () => UI.show("menu"));
 bind("bShop", () => { UI.buildShop(); UI.syncShards(); UI.show("shop"); });
 bind("bChars", () => { UI.buildChars(); UI.syncShards(); UI.show("chars"); });
 bind("bCollection", () => { UI.buildCollection(); UI.show("collection"); });
@@ -503,7 +655,12 @@ bind("bHelpBack", () => UI.show("menu"));
 bind("bShopBack", () => UI.show("menu"));
 bind("bCharBack", () => UI.show("menu"));
 bind("bResume", () => { g.state = "play"; UI.hideAll(); clearPressed(); });
-bind("bQuit", () => { g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu"); });
+bind("bQuit", () => {
+  /* если забег уже засчитан (дожил до 15:00), выход из паузы закрывает его
+     нормально — с осколками. Иначе это по-прежнему отказ без награды. */
+  if (g.won) { g.state = "play"; endRun(true); return; }
+  g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu");
+});
 bind("bAgain", () => startRun());
 bind("bMenu", () => { g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu"); });
 
@@ -536,9 +693,14 @@ function hotkeys() {
   const ent = tookKey("enter");
   switch (g.state) {
     case "menu":
-      if (UI.current === "menu") { if (ent) { Sfx.init(); Sfx.resume(); UI.showClassPick(); } }
-      else if (UI.current === "class") {
+      if (UI.current === "menu") { if (ent) { Sfx.init(); Sfx.resume(); UI.showArenas(); } }
+      else if (UI.current === "arena") {
         if (esc) UI.show("menu");
+        else for (let i = 0; i < ARENAS.length; i++)
+          if (tookKey(String(i + 1))) { UI.pickArena(i); break; }
+      }
+      else if (UI.current === "class") {
+        if (esc) UI.showArenas();
         else for (let i = 0; i < ABILITY_LIST.length; i++)
           if (tookKey(String(i + 1))) { UI.pickClass(ABILITY_LIST[i]); break; }
       }

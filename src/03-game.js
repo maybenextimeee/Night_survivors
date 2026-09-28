@@ -7,6 +7,7 @@ const CHEST_FAST = 25;
 const CHEST_GOLD_EVERY = 4;   // каждый четвёртый сундук — золотой
 const WAVE_EVERY = 120;       // большая волна раз в две минуты
 const WAVE_WARN = 2.5;        // столько секунд предупреждаем до её выхода
+const ENDLESS_BOSS_EVERY = 150; // после финала боссы приходят по кругу раз в 2.5 минуты
 const RUSH_PER_KILL = 0.025;  // +2.5% скорости за врага, убитого активным навыком…
 const RUSH_CAP = 0.3;         // …не выше +30%…
 const RUSH_TIME = 1;          // …держится секунду после каста…
@@ -41,7 +42,12 @@ const g = {
   dmgSource: null, dmgName: "", stats: {},
   waveT: 0, waveIdx: 0, waveHold: 0, warn: null,
   runProps: 0, runChests: 0, runBosses: 0, runMaxed: 0, rerolls: 0, unlockT: 0,
-  quests: [], questBonus: 0, banishes: 0, banished: []
+  quests: [], questBonus: 0, banishes: 0, banished: [],
+  /* арена забега: свой набор врагов, боссов и палитра пола */
+  arena: 0, arenaDef: null, bosses: [], roster: [],
+  /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
+  endless: false, endlessT: 0, endlessIdx: 0,
+  runQuests: 0, firstHit: -1, achT: 0
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -51,7 +57,7 @@ function makePlayer(charId) {
   const ch = CHARS.find(c => c.id === charId) || CHARS[0];
   const m = ch.mods || {};
   const p = {
-    x: 0, y: 0, vx: 0, vy: 0, r: 13, face: -Math.PI / 2,
+    x: 0, y: 0, vx: 0, vy: 0, r: 11, face: -Math.PI / 2,
     level: 1, xp: 0, xpNext: 14,
     weapons: [], passives: {},
     dashT: 0, dashCd: 0, inv: 0, hitFlash: 0,
@@ -82,7 +88,7 @@ function recalc(p) {
   const L = k => p.passives[k] || 0;
   const m = p.mods;
   p.dmgMul = (1 + L("power") * 0.15) * (1 + metaLvl("dmg") * 0.06) * (m.dmg || 1);
-  p.cdMul = Math.pow(0.92, L("haste")) * (m.cd || 1);
+  p.cdMul = Math.pow(0.92, L("haste")) * Math.pow(0.92, metaLvl("cool")) * (m.cd || 1);
   p.areaMul = 1 + L("area") * 0.12;
   p.speed = 196 * (1 + L("boots") * 0.09) * (1 + metaLvl("spd") * 0.04) * (m.spd || 1);
   p.pickR = 78 * (1 + L("magnet") * 0.3) * (1 + metaLvl("mag") * 0.18);
@@ -101,6 +107,29 @@ function recalc(p) {
   p.hp = Math.min(p.hp, p.maxHp);
 }
 
+/* Арена определяет набор врагов, боссов и палитру. Жнец (arena: -1) приходит
+   только на первых двух — на третьей его место занимает финальный босс. */
+function arenaUnlocked(i) {
+  if (i <= 0) return true;
+  return save.arenaDone.indexOf(ARENAS[i - 1].id) >= 0;
+}
+function setArena(i) {
+  if (!(i >= 0 && i < ARENAS.length) || !arenaUnlocked(i)) i = 0;
+  g.arena = i;
+  g.arenaDef = ARENAS[i];
+  g.roster = ARENAS[i].roster.map(id => ENEMY_BY_ID[id]).filter(Boolean);
+  const last = i === ARENAS.length - 1;
+  g.bosses = BOSSES.filter(b => b.arena === i || (b.reaper && !last));
+  g.bosses.sort((a, b) => a.t - b.t);
+}
+
+/* сколько осталось до следующего сундука — для счётчика в HUD */
+function chestLeft() {
+  if (g.time < CHEST_FIRST) return CHEST_FIRST - g.time;
+  return Math.max(0, g.chestT);
+}
+function chestGoldNext() { return (g.chests + 1) % CHEST_GOLD_EVERY === 0; }
+
 function startRun() {
   g.state = "play";
   g.time = 0; g.kills = 0; g.gold = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
@@ -112,6 +141,9 @@ function startRun() {
   g.rerolls = metaLvl("reroll"); g.unlockT = 0;
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
+  g.runQuests = 0; g.firstHit = -1; g.achT = 0;
+  g.endless = false; g.endlessT = 0; g.endlessIdx = 0;
+  setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
   g.parts.length = g.nums.length = g.slashes.length = g.zaps.length = 0;
@@ -207,6 +239,19 @@ function killEnemy(e) {
     for (let i = 0; i < 6; i++) g.drops.push({ x: e.x + rnd(-60, 60), y: e.y + rnd(-60, 60), r: 9, type: "gold", v: 10 });
     g.drops.push({ x: e.x, y: e.y, r: 14, type: "chest" });
     UI.toast("★ " + e.def.name + " ПОВЕРЖЕН");
+    if (e.def.reaper) { save.reaperKill = true; writeSave(); }
+    if (e.def.finalBoss) {
+      /* игра пройдена — но забег не обрывается: дальше бесконечная ночь */
+      save.beaten = true;
+      writeSave();
+      g.endless = true;
+      g.endlessT = ENDLESS_BOSS_EVERY;
+      g.shake = 40;
+      UI.toast("★ ПЕРВОИСТОЧНИК УНИЧТОЖЕН");
+      UI.toast("НОЧЬ ПРОДОЛЖАЕТСЯ");
+      Sfx.win();
+    }
+    checkAch();
     if (e.def.final) { g.won = true; endRun(true); }
     return;
   }
@@ -478,9 +523,16 @@ function bossSummon(gg, e, dt, period, n) {
 function difficulty() {
   const m = g.time / 60;
   const curseMul = 1 + metaLvl("curse") * 0.12;
+  /* арена добавляет свой множитель к здоровью и урону, но не к скорости
+     и не к темпу спавна — иначе третья карта превращается в кашу */
+  const am = g.arenaDef ? g.arenaDef.mult : 1;
+  /* по здоровью множитель идёт целиком, по урону — примерно наполовину:
+     враги поздних арен и сами по себе бьют больнее, и полный множитель
+     сверху сносил бы игрока с одного касания уже на первой минуте */
+  const amDmg = 1 + (am - 1) * 0.55;
   return {
-    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul,
-    dmg: (1 + m * 0.32) * curseMul,
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am,
+    dmg: (1 + m * 0.32) * curseMul * amDmg,
     spd: 1 + Math.min(0.45, m * 0.048),
     rate: Math.min(18, 2.6 + m * 1.6)
   };
@@ -512,13 +564,16 @@ function spawnRing() {
 }
 /* случайный враг из уже открытых по времени */
 function unlockedPick() {
+  const list = g.roster.length ? g.roster : ENEMIES;
   const pool = [];
-  for (let i = 0; i < ENEMIES.length; i++) {
-    const def = ENEMIES[i];
+  for (let i = 0; i < list.length; i++) {
+    const def = list[i];
     if (g.time < def.from) continue;
     for (let k = 0; k < def.w; k++) pool.push(def);
   }
-  return pick(pool);
+  /* в первые секунды третьей арены открыт только «Осколок» — подстраховка,
+     чтобы пул никогда не оказался пустым */
+  return pool.length ? pick(pool) : list[0];
 }
 
 function spawnBoss(def) {
@@ -597,12 +652,23 @@ function director(dt) {
   }
 
   /* босс по расписанию */
-  if (g.bossIdx < BOSSES.length && g.time >= BOSSES[g.bossIdx].t) {
-    const def = BOSSES[g.bossIdx++];
+  if (g.bossIdx < g.bosses.length && g.time >= g.bosses[g.bossIdx].t) {
+    const def = g.bosses[g.bossIdx++];
+    if (def.finalBoss) {
+      /* финал третьей арены: ночь уже пережита, но выходит то, ради чего
+         всё затевалось. Забег после его смерти не кончается. */
+      g.won = true;
+      if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+      writeSave();
+      UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      spawnBoss(def);
+      return;
+    }
     if (def.reaper) {
       /* ночь пережита: забег засчитан ещё до того, как Жнец кого-то тронет */
       g.won = true;
       g.reaper = true;
+      if (save.arenaDone.indexOf(g.arenaDef.id) < 0) { save.arenaDone.push(g.arenaDef.id); writeSave(); }
       for (let i = 0; i < g.enemies.length; i++) {
         const e = g.enemies[i];
         if (!e.dead) { burst(e.x, e.y, e.color, 5, 2); e.dead = true; }
@@ -614,6 +680,16 @@ function director(dt) {
       return;
     }
     spawnBoss(def);
+  }
+  /* бесконечный режим: расписание кончилось, но боссы продолжают приходить
+     по кругу и с каждым разом крепче — иначе после финала нечего делать */
+  if (g.endless && !g.boss) {
+    g.endlessT -= dt;
+    if (g.endlessT <= 0) {
+      g.endlessT = ENDLESS_BOSS_EVERY;
+      const pool = g.bosses.filter(b => !b.reaper);
+      if (pool.length) spawnBoss(pool[g.endlessIdx++ % pool.length]);
+    }
   }
   if (g.boss && g.enemies.length > MAX_ENEMIES * 0.7) return;
 
@@ -749,6 +825,8 @@ function tryEvolve() {
   w.t = 0;
   w.hits = new Map();
   questProgress("evolve", w.base, 1);
+  if (save.evoSeen.indexOf(w.id) < 0) { save.evoSeen.push(w.id); writeSave(); }
+  checkAch();
   recalc(p);
   UI.syncRack();
   UI.toast("✦ " + def.name.toUpperCase());
@@ -785,6 +863,7 @@ function hurtPlayer(dmg) {
   const p = g.p;
   if (p.inv > 0 || p.dashT > 0) return;
   const real = Math.max(1, dmg - p.armor);
+  if (g.firstHit < 0) g.firstHit = g.time;   // для достижения «ни царапины»
   p.hp -= real;
   p.inv = 0.55;
   p.hitFlash = 0.3;
@@ -824,8 +903,9 @@ function enemyIcon(def, color) {
 
 function makeQuests() {
   const p = g.p, pool = [];
-  for (let i = 0; i < ENEMIES.length; i++) {
-    const def = ENEMIES[i];
+  const roster = g.roster.length ? g.roster : ENEMIES;
+  for (let i = 0; i < roster.length; i++) {
+    const def = roster[i];
     if (def.from > RUN_LEN * 0.6) continue;          // кого не успеешь встретить — не предлагаем
     pool.push({
       kind: "kill", key: def.id, name: def.name, color: def.color, icon: enemyIcon(def, def.color),
@@ -873,10 +953,13 @@ function questProgress(kind, key, amount) {
     if (q.have >= q.goal) {
       q.have = q.goal;
       q.done = true;
+      q.doneAt = g.time;                     // по ней рисуется вспышка в панели
+      g.runQuests++;
       g.questBonus += q.reward;
       g.gold += q.reward;
       UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ◈");
       Sfx.ultReady();
+      if (UI.flashQuest) UI.flashQuest();
     }
   }
 }
@@ -931,6 +1014,55 @@ function checkUnlocks() {
   return opened;
 }
 
+/* ---------- достижения -------------------------------------------------
+   Один снимок статистики на проверку: так условия в 02-content.js читаются
+   как обычные сравнения и их можно дописывать, ничего тут не трогая.     */
+function achStats() {
+  const t = save.total;
+  let weapons = 0, chars = 0, evoTotal = 0;
+  for (const id in WEAPONS) if (WEAPONS[id].evolved) evoTotal++;
+  for (const id in WEAPONS) if (!WEAPONS[id].evolved && isUnlocked("w:" + id)) weapons++;
+  for (let i = 0; i < CHARS.length; i++) if (isUnlocked("c:" + CHARS[i].id)) chars++;
+  let colDone = true;
+  for (let i = 0; i < UNLOCKS.length; i++) if (!isUnlocked(UNLOCKS[i].id)) { colDone = false; break; }
+  let metaMax = false;
+  for (let i = 0; i < META.length; i++) if (metaLvl(META[i].id) >= META[i].max) { metaMax = true; break; }
+  return {
+    kills: t.kills + g.kills,
+    props: t.props + g.runProps,
+    chests: t.chests + g.runChests,
+    bosses: t.bosses + g.runBosses,
+    maxed: t.maxed + g.runMaxed,
+    quests: t.quests + g.runQuests,
+    earned: t.earned,
+    shards: save.shards,
+    best: Math.max(save.best, g.time),
+    level: Math.max(save.bestLevel || 0, g.p ? g.p.level : 0),
+    evos: save.evoSeen.length, evoTotal: evoTotal,
+    weapons: weapons, chars: chars, colDone: colDone, metaMax: metaMax,
+    done: save.arenaDone, beaten: !!save.beaten, reaperKill: !!save.reaperKill,
+    curseWin: save.curseWin || 0,
+    /* «ни царапины»: пятая минута наступила, а по игроку ещё не попали */
+    clean5: g.state === "play" && g.time >= 300 && g.firstHit < 0
+  };
+}
+function checkAch() {
+  const s = achStats();
+  let got = 0;
+  for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+    const a = ACHIEVEMENTS[i];
+    if (save.ach.indexOf(a.id) >= 0) continue;
+    let ok = false;
+    try { ok = !!a.f(s); } catch (e) { ok = false; }
+    if (!ok) continue;
+    save.ach.push(a.id);
+    got++;
+    UI.achPop(a);
+  }
+  if (got) writeSave();
+  return got;
+}
+
 /* ---------- конец забега ---------------------------------------------- */
 function endRun(won) {
   if (g.state === "end") return;
@@ -947,10 +1079,17 @@ function endRun(won) {
   /* забег вливается в общую статистику, счётчики обнуляются */
   const t = save.total;
   t.kills += g.kills; t.props += g.runProps; t.chests += g.runChests;
-  t.bosses += g.runBosses; t.maxed += g.runMaxed;
-  g.runProps = g.runChests = g.runBosses = g.runMaxed = 0;
+  t.bosses += g.runBosses; t.maxed += g.runMaxed; t.quests += g.runQuests;
+  t.earned += total;
+  g.runProps = g.runChests = g.runBosses = g.runMaxed = g.runQuests = 0;
+  /* закрытая арена открывает следующую; заодно помним, под каким проклятием */
+  if (won && g.arenaDef) {
+    if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
+    save.curseWin = Math.max(save.curseWin || 0, metaLvl("curse"));
+  }
   writeSave();
   checkUnlocks();
+  checkAch();
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
@@ -1382,6 +1521,9 @@ function update(dt) {
 
   g.unlockT -= dt;
   if (g.unlockT <= 0) { g.unlockT = 1; checkUnlocks(); }
+  /* достижения проверяем пореже: условий много, а меняются они медленно */
+  g.achT -= dt;
+  if (g.achT <= 0) { g.achT = 2; checkAch(); }
 
   compact();
 }

@@ -149,6 +149,7 @@ const Sfx = {
   dash() { this.noise(0.14, 0.08, 1800); },
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
+  ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
   ultReady() { this.blip(1420, 0.07, "triangle", 0.055, 120); setTimeout(() => this.blip(2130, 0.09, "triangle", 0.05, 160), 70); },
   empty() { this.blip(220, 0.06, "square", 0.03, -70); },
   die() { this.seq([0, 1, 2, 3, 4], 130, (n) => this.blip(360 / (1 + n * 0.35), 0.34, "sawtooth", 0.15, -70)); },
@@ -173,10 +174,15 @@ const Sfx = {
 
 /* ---------- 2. сохранение -------------------------------------------- */
 const SAVE_KEY = "nightshift.save.v1";
+const DEF_TOTAL = () => ({ kills: 0, props: 0, chests: 0, bosses: 0, maxed: 0, quests: 0, earned: 0 });
 const defaultSave = () => ({
   shards: 0, meta: {}, owned: [], best: 0, bestKills: 0, bestLevel: 0, wins: 0, runs: 0,
   char: "shift", ability: "phantom", sound: true,
-  unlocked: [], total: { kills: 0, props: 0, chests: 0, bosses: 0, maxed: 0 }
+  unlocked: [], total: DEF_TOTAL(),
+  /* арены: какая выбрана и какие уже закрыты (дошёл до 15:00) */
+  arena: 0, arenaDone: [], beaten: false,
+  /* достижения и список уже собранных эволюций — по ним считаются ачивки */
+  ach: [], evoSeen: []
 });
 let save = defaultSave();
 function loadSave() {
@@ -188,12 +194,17 @@ function loadSave() {
   } catch (e) { /* приватный режим или битые данные — играем с нуля */ }
   if (!save.meta || typeof save.meta !== "object") save.meta = {};
   if (!Array.isArray(save.unlocked)) save.unlocked = [];
-  if (!save.total || typeof save.total !== "object") save.total = { kills: 0, props: 0, chests: 0, bosses: 0, maxed: 0 };
+  if (!save.total || typeof save.total !== "object") save.total = DEF_TOTAL();
+  else save.total = Object.assign(DEF_TOTAL(), save.total);
+  if (!Array.isArray(save.arenaDone)) save.arenaDone = [];
+  if (!Array.isArray(save.ach)) save.ach = [];
+  if (!Array.isArray(save.evoSeen)) save.evoSeen = [];
+  if (typeof save.arena !== "number") save.arena = 0;
 }
 
 /* базовый набор доступен сразу, остальное копится в save.unlocked */
 const BASE_UNLOCKED = [
-  "w:blade", "w:orbit", "w:shotgun",
+  "w:blade", "w:orbit", "w:shotgun", "w:chain", "w:mines",
   "p:power", "p:haste", "p:area", "p:boots", "p:magnet", "p:heart",
   "c:shift", "c:engineer", "c:sparks"
 ];

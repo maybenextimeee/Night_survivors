@@ -82,7 +82,9 @@ body{
 .bossbar .bar{height:9px;border-color:#5a1c33}
 .bossbar .bar>i{background:linear-gradient(90deg,#ff2f6e,#ff9ec2)}
 
-#rack{position:fixed;left:18px;bottom:16px;z-index:4;display:none;gap:18px;pointer-events:none}
+/* z-index выше экранов: на паузе и на выборе карт стойка не должна
+   уходить в размытие — по ней и сверяешь билд */
+#rack{position:fixed;left:18px;bottom:16px;z-index:11;display:none;gap:18px;pointer-events:none}
 #rack.on{display:flex}
 .rackcol{display:flex;flex-direction:column-reverse;gap:6px}
 .slot{display:flex;align-items:center;gap:7px;background:rgba(13,18,32,.78);border:1px solid var(--line);
@@ -275,12 +277,13 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .qrow.done .qn{text-decoration:line-through;color:var(--muted)}
 
 /* заставка с заданиями в начале забега */
-#questIntro{position:fixed;inset:0;z-index:9;display:none;place-items:center;pointer-events:none}
+#questIntro{position:fixed;inset:0;z-index:9;display:none;place-items:start center;
+  padding-top:11vh;pointer-events:none}
 #questIntro.on{display:grid;animation:qiFade 3.4s ease forwards}
 @keyframes qiFade{0%{opacity:0}8%{opacity:1}72%{opacity:1}100%{opacity:0}}
 .qi-inner{text-align:center;animation:qiRise 3.4s cubic-bezier(.2,.8,.3,1) forwards}
-@keyframes qiRise{0%{transform:translateY(22px) scale(.94)}12%{transform:none}
-  74%{transform:none}100%{transform:translateY(-70px) scale(.72)}}
+@keyframes qiRise{0%{transform:translateY(26px) scale(.94)}12%{transform:none}
+  74%{transform:none}100%{transform:translateY(-56px) scale(.74)}}
 .qi-head{font-family:var(--mono);font-size:12px;letter-spacing:5px;text-transform:uppercase;
   color:var(--gold);margin:0 0 16px;text-shadow:0 0 20px rgba(255,194,61,.5)}
 .qi-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
@@ -300,15 +303,16 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 
 /* задания на паузе — крупнее и ярче, чем в бою */
 .qpause{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
-.qpause .qrow{padding:9px 12px;background:var(--panel-2);opacity:1}
-.qpause .qrow .qn{font-size:12px}
+.qpause .qrow{padding:10px 13px;background:var(--panel-2);opacity:1}
+.qpause .qrow .qv{font-size:11px}
+.qpause .qrow .qn{font-size:13.5px}
 .qpause .qrow .ico{width:24px;height:24px}
 
 /* статы на паузе */
-.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;
   margin:0 0 18px;padding-top:14px;border-top:1px solid var(--line)}
-.statgrid div{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);
-  font-size:11px;font-variant-numeric:tabular-nums}
+.statgrid div{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);
+  font-size:12.5px;font-variant-numeric:tabular-nums}
 .statgrid span{color:var(--muted)}
 .statgrid b{color:var(--ink);font-weight:600}
 
@@ -330,17 +334,18 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   display:flex;flex-direction:column;gap:18px}
 .colsec h3{font-family:var(--display);font-size:12px;letter-spacing:3px;text-transform:uppercase;
   color:var(--muted);margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-.colrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:8px}
-.colit{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--panel-2);
-  border:1px solid var(--line)}
+.colrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(304px,1fr));gap:8px}
+.colit{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--panel-2);
+  border:1px solid var(--line);min-height:52px}
 .colit .ico{width:24px;height:24px;flex:none}
 .colit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.colit .nm{font-family:var(--display);font-size:13px;letter-spacing:.6px;text-transform:uppercase;
+.colit .nm{font-family:var(--display);font-size:13.5px;letter-spacing:.6px;text-transform:uppercase;
   color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.colit .sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.3px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* условие переносим на вторую строку: обрезка прятала половину текста */
+.colit .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.2px;
+  line-height:1.35;white-space:normal;overflow-wrap:anywhere}
 .colit .mark{font-family:var(--mono);font-size:14px;color:var(--lime);flex:none}
-.colit .prog{font-size:10px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.colit .prog{font-size:11px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
 .colit.locked{opacity:.55;border-style:dashed}
 .colit.locked .nm{color:var(--muted)}
 .colit.locked .sub{color:var(--gold)}
@@ -381,6 +386,92 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 ::-webkit-scrollbar-thumb{background:var(--line)}
 ::-webkit-scrollbar-track{background:transparent}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* --- линейка забега: заполняется временем, метки — расписание боссов --- */
+.timeline{position:relative;width:min(300px,26vw);height:5px;margin:7px 0 2px;
+  background:#0a0f1c;border:1px solid var(--line)}
+.timeline .tfill{position:absolute;left:0;top:0;bottom:0;background:var(--cyan);
+  opacity:.5;transition:width .2s linear}
+.timeline .bm{position:absolute;top:-4px;width:9px;height:11px;margin-left:-4.5px;
+  display:grid;place-items:center}
+.timeline .bm:before{content:"";width:3px;height:11px;background:var(--magenta);
+  box-shadow:0 0 7px rgba(255,47,110,.7)}
+/* пройденные отметки гаснут, ближайшая пульсирует */
+.timeline .bm.past:before{background:var(--muted);box-shadow:none;opacity:.5}
+.timeline .bm.next:before{animation:bmp 1.4s ease-in-out infinite}
+.timeline .bm.fin:before{background:var(--gold);width:4px;height:14px;top:-1.5px;
+  box-shadow:0 0 9px rgba(255,194,61,.8)}
+@keyframes bmp{50%{opacity:.35}}
+#chestStat b{color:var(--gold)}
+#chestStat.gold{color:var(--gold)}
+
+/* задание выполнено: короткая вспышка строки, чтобы это было видно боковым зрением */
+.qrow.fresh{opacity:1;animation:qfresh 1.6s ease}
+.qrow.fresh .qn{text-decoration:none;color:var(--ink)}
+@keyframes qfresh{
+  0%{transform:scale(1);box-shadow:none;background:rgba(8,12,22,.72)}
+  12%{transform:scale(1.06);background:rgba(182,255,61,.22);box-shadow:0 0 18px rgba(182,255,61,.45)}
+  45%{transform:scale(1);background:rgba(182,255,61,.12);box-shadow:0 0 10px rgba(182,255,61,.22)}
+  100%{transform:scale(1);background:rgba(8,12,22,.72);box-shadow:none}
+}
+
+/* --- всплывашка достижения: угол экрана, сама уезжает --- */
+/* поднята над панелью навыка и рывком — иначе всплывашка накрывает их */
+#achPop{position:fixed;right:18px;bottom:78px;z-index:22;display:none;align-items:center;gap:11px;
+  width:302px;padding:11px 13px;background:rgba(10,14,25,.96);
+  border:1px solid var(--rar,#3ee8ff);border-left-width:3px;
+  box-shadow:0 8px 28px rgba(0,0,0,.6),0 0 22px -8px var(--rar,#3ee8ff);pointer-events:none}
+#achPop.on{display:flex;animation:achIn .42s cubic-bezier(.2,.9,.3,1),achOut .5s 4.1s forwards}
+@keyframes achIn{from{opacity:0;transform:translateX(26px)}}
+@keyframes achOut{to{opacity:0;transform:translateX(26px)}}
+#achPop .ai{width:30px;height:30px;flex:none;display:grid;place-items:center}
+#achPop .ai svg{width:30px;height:30px}
+#achPop .at{display:flex;flex-direction:column;gap:2px;min-width:0}
+#achPop .ar{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--rar,#3ee8ff)}
+#achPop .an{font-family:var(--display);font-size:14px;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--ink)}
+#achPop .ad{font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.35}
+
+/* --- экраны арены и достижений --- */
+.panel.wide{width:min(1060px,100%)}
+.arenas{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:12px;margin-top:6px}
+.arena{position:relative;text-align:left;background:var(--panel-2);border:1px solid var(--line);
+  border-top:3px solid var(--ac,#3ee8ff);padding:16px 17px;color:var(--ink);cursor:pointer;
+  display:flex;flex-direction:column;gap:7px;font:inherit}
+.arena:hover:not(.lock),.arena:focus-visible{border-color:var(--ac,#3ee8ff);outline:none;
+  box-shadow:0 0 24px -10px var(--ac,#3ee8ff)}
+.arena .tag{font-family:var(--mono);font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--ac,#3ee8ff)}
+.arena .nm{font-family:var(--display);font-size:20px;letter-spacing:1px;text-transform:uppercase}
+.arena .ds{font-size:12.5px;color:var(--muted);line-height:1.45}
+.arena .mt{display:flex;gap:14px;font-family:var(--mono);font-size:10.5px;color:var(--muted);
+  margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
+.arena .mt b{color:var(--ink);font-weight:600}
+.arena .prev{display:flex;gap:6px}
+.arena .prev i{width:13px;height:13px;display:block;background:currentColor;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.arena.sel{border-color:var(--ac,#3ee8ff);background:#16203a}
+.arena.done:after{content:"ПРОЙДЕНА";position:absolute;right:14px;top:13px;font-family:var(--mono);
+  font-size:9px;letter-spacing:2px;color:var(--lime)}
+.arena.lock{opacity:.42;cursor:not-allowed}
+.arena.lock:after{content:"ЗАКРЫТО";position:absolute;right:14px;top:13px;font-family:var(--mono);
+  font-size:9px;letter-spacing:2px;color:var(--muted)}
+
+.achgrid{margin-top:16px;max-height:58vh;overflow-y:auto;overflow-x:hidden;padding-right:6px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(318px,1fr));gap:8px;align-content:start}
+.achit{display:flex;align-items:center;gap:11px;padding:10px 12px;background:var(--panel-2);
+  border:1px solid var(--line);border-left:3px solid var(--rar,#8fa3c8);min-height:56px}
+.achit .ico{width:26px;height:26px;flex:none}
+.achit .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.achit .nm{font-family:var(--display);font-size:13.5px;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--ink)}
+.achit .sub{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.35}
+.achit .rr{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--rar,#8fa3c8);flex:none;align-self:flex-start}
+.achit.got{background:#16203a;box-shadow:inset 0 0 22px -12px var(--rar,#8fa3c8)}
+.achit.locked{opacity:.44}
+.achit.locked .nm{color:var(--muted)}
 </style>
 
 <canvas id="cv"></canvas>
@@ -391,10 +482,12 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="topbar">
     <div>
       <div class="clock" id="clock">00:00</div>
+      <div class="timeline" id="timeline"><i class="tfill" id="tlFill"></i></div>
       <div class="stats">
         <span>УБИЙСТВ <b id="sKills">0</b></span>
         <span>ОСКОЛКИ <b id="sGold">0</b></span>
         <span>ВОЛНА <b id="sWave">1</b></span>
+        <span id="chestStat">СУНДУК <b id="sChest">45 с</b></span>
         <span id="rushStat" hidden style="color:var(--lime)">РАЗГОН <b id="sRush">+0%</b></span>
       </div>
     </div>
@@ -444,6 +537,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
       <button id="bShop">Мастерская <span class="k" id="kShards">0 ◈</span></button>
       <button id="bChars">Операторы</button>
       <button id="bCollection">Коллекция <span class="k" id="kCol">0 / 0</span></button>
+      <button id="bAch">Достижения <span class="k" id="kAch">0 / 0</span></button>
       <button id="bHelp">Управление</button>
     </div>
     <p class="hint">Лучший результат: <span id="bestTxt">—</span></p>
@@ -506,6 +600,24 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   </div>
 </div>
 
+<div class="screen" id="scrArena">
+  <div class="panel wide">
+    <p class="eyebrow">Куда идём</p>
+    <h2>Арена</h2>
+    <div class="arenas" id="arenaRow"></div>
+    <div class="row"><button id="bArenaBack">Назад <span class="k">ESC</span></button></div>
+  </div>
+</div>
+
+<div class="screen" id="scrAch">
+  <div class="panel wide">
+    <p class="eyebrow">Что уже сделано</p>
+    <h2>Достижения <span class="shards" id="achCount">0 / 0</span></h2>
+    <div class="achgrid" id="achGrid"></div>
+    <div class="row"><button id="bAchBack">Назад <span class="k">ESC</span></button></div>
+  </div>
+</div>
+
 <div class="screen" id="scrChars">
   <div class="panel">
     <p class="eyebrow">Кто выходит на забег</p>
@@ -561,5 +673,10 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     </div>
   </div>
 </div>
+
+<div id="achPop"><span class="ai" id="achIco"></span>
+  <span class="at"><span class="ar" id="achRar">Редкое достижение</span>
+  <span class="an" id="achName">Слияние</span>
+  <span class="ad" id="achDesc">Собери первую эволюцию</span></span></div>
 
 <div id="toast"></div>
