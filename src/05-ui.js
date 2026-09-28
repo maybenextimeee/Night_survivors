@@ -18,14 +18,18 @@ const UI = {
     $("rack").classList.add("on");
     $("dash").classList.add("on");
     $("skill").classList.add("on");
+    $("quests").classList.add("on");
     this.syncSkill();
     this.syncRack();
+    this.buildQuests();
   },
   leavePlay() {
     $("hud").classList.remove("on");
     $("rack").classList.remove("on");
     $("dash").classList.remove("on");
     $("skill").classList.remove("on");
+    $("quests").classList.remove("on");
+    $("questIntro").classList.remove("on");
     $("bossBar").classList.remove("on");
   },
 
@@ -84,6 +88,7 @@ const UI = {
     $("skill").classList.toggle("ready", ready);
     $("skillKey").classList.toggle("rdy", p.abCharge >= 1);
     $("skillKey").textContent = p.abCharge >= 1 ? "ЛКМ" : (abCdSec(p) * (1 - p.abCharge)).toFixed(1);
+    this.syncQuests();
   },
 
   /* стойка всегда показывает все слоты: занятые и пустые под рамкой */
@@ -95,7 +100,8 @@ const UI = {
       const w = p.weapons[i];
       if (!w) { hw += '<div class="slot empty"></div>'; continue; }
       const def = WEAPONS[w.id];
-      hw += '<div class="slot' + (def.evolved ? " evo" : "") + '">' +
+      const ready = def.evoTo && w.lvl >= def.max && (p.passives[def.evoNeed] || 0) >= 4;
+      hw += '<div class="slot' + (def.evolved ? " evo" : "") + (ready ? " evoready" : "") + '">' +
         svg(ICONS[def.ico], def.color) +
         '<span class="nm">' + def.name + "</span>" +
         (def.evolved ? '<span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i></span>'
@@ -114,6 +120,66 @@ const UI = {
     }
     $("rackW").innerHTML = hw;
     $("rackP").innerHTML = hp;
+  },
+
+  showPause() {
+    const p = g.p;
+    $("questPause").innerHTML = g.quests.length
+      ? g.quests.map(q => this.questRow(q)).join("") : "";
+    if (p) {
+      const pct = v => Math.round(v * 100) + "%";
+      const rows = [
+        ["Урон", "×" + p.dmgMul.toFixed(2)],
+        ["Откат", "−" + Math.round((1 - p.cdMul) * 100) + "%"],
+        ["Площадь", "×" + p.areaMul.toFixed(2)],
+        ["Длительность", "×" + p.durMul.toFixed(2)],
+        ["Скорость", Math.round(p.speed) + " px/с"],
+        ["Броня", "−" + p.armor.toFixed(0)],
+        ["Регенерация", p.regen.toFixed(1) + "/с"],
+        ["Радиус сбора", Math.round(p.pickR) + " px"],
+        ["Добыча", "×" + p.greedMul.toFixed(2)],
+        ["Опыт", "×" + p.xpMul.toFixed(2)],
+        ["Снарядов", "+" + p.countBonus],
+        ["Удача", "+" + pct(p.luck)]
+      ];
+      $("pauseStats").innerHTML = rows.map(r => "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
+    } else $("pauseStats").innerHTML = "";
+    this.show("pause");
+  },
+
+  /* ---- задания забега ---- */
+  questRow(q, cls) {
+    const pct = Math.round(q.have / q.goal * 100);
+    return '<div class="qrow' + (q.done ? " done" : "") + (cls || "") + '" style="border-left-color:' + q.color + '">' +
+      q.icon +
+      '<span class="qt"><span class="qn">' + q.label + " " + q.name + "</span>" +
+      '<span class="qbar"><i style="width:' + pct + '%;background:' + q.color + '"></i></span></span>' +
+      '<span class="qv">' + (q.done ? "✔" : q.have + "/" + q.goal) + "</span></div>";
+  },
+  buildQuests() {
+    if (!g.quests.length) { $("quests").innerHTML = ""; return; }
+    this._qcache = g.quests.map(q => q.have + "/" + q.done);
+    $("quests").innerHTML = g.quests.map(q => this.questRow(q)).join("");
+  },
+  syncQuests() {
+    if (!g.quests.length) return;
+    const now = g.quests.map(q => q.have + "/" + q.done);
+    if (this._qcache && now.join("|") === this._qcache.join("|")) return;  // без нужды DOM не трогаем
+    this.buildQuests();
+  },
+  showQuestIntro() {
+    if (!g.quests.length) return;
+    $("questIntroRow").innerHTML = g.quests.map(q =>
+      '<div class="qi-card" style="border-left-color:' + q.color + '">' + q.icon +
+      '<span class="qi-t"><span class="qi-l">' + q.label + "</span>" +
+      '<span class="qi-n">' + q.name + (q.kind === "kill" ? " ×" + q.goal : "") + "</span>" +
+      '<span class="qi-r">+' + q.reward + " ◈</span></span></div>").join("");
+    const el = $("questIntro");
+    el.classList.remove("on");
+    void el.offsetWidth;                       // перезапуск анимации
+    el.classList.add("on");
+    clearTimeout(this._qiT);
+    this._qiT = setTimeout(() => el.classList.remove("on"), 3400);
   },
 
   syncSkill() {
@@ -170,8 +236,13 @@ const UI = {
     cards.forEach((c, i) => {
       const def = c.def;
       const el = document.createElement("button");
+      /* рамка по редкости: чем реже предмет, тем заметнее */
+      const rw = c.kind === "wup" || c.kind === "wnew" ? RARITY.w[c.w ? c.w.base : c.id]
+        : c.kind === "pup" || c.kind === "pnew" ? RARITY.p[c.id] : null;
+      const tier = rw == null ? "" : rw >= 90 ? " rare-1" : rw >= 60 ? " rare-2" : " rare-3";
       el.className = "card" + (c.kind === "wnew" || c.kind === "pnew" ? " new" : "") +
-        (c.kind === "pup" || c.kind === "pnew" ? " pas" : "");
+        (c.kind === "pup" || c.kind === "pnew" ? " pas" : "") + tier +
+        (canBanish(c) ? " canban" : "");
       const kind = c.kind === "wnew" ? "Новое оружие"
           : c.kind === "wup" ? "Оружие · ур. " + (c.w.lvl + 1)
             : c.kind === "abup" ? "Способность · ур. " + (c.lvl + 1)
@@ -189,10 +260,17 @@ const UI = {
         '<div class="top">' + svg(ICONS[def.ico], def.color) +
         '<div><div class="kind">' + kind + '</div><div class="nm">' + def.name + "</div></div></div>" +
         '<div class="desc">' + desc + "</div>" +
-        '<div class="foot">' + foot + '<span class="key">' + (i + 1) + "</span></div>";
-      el.addEventListener("click", () => takeCard(c));
+        '<div class="foot">' + foot + '<span class="key">' + (i + 1) + "</span></div>" +
+        (canBanish(c) ? '<span class="ban" title="Изгнать до конца забега">✕</span>' : "");
+      el.addEventListener("click", ev => {
+        if (ev.target.classList.contains("ban")) { ev.stopPropagation(); banishCard(c); return; }
+        takeCard(c);
+      });
       row.appendChild(el);
     });
+    const bh = $("banishHint");
+    bh.classList.toggle("on", g.banishes > 0 && !spares);
+    $("banishLeft").textContent = g.banishes;
     const rr = $("rerollBtn");
     rr.classList.toggle("on", g.rerolls > 0 && !spares);
     $("rerollLeft").textContent = g.rerolls;
@@ -211,6 +289,7 @@ const UI = {
       ["Уровень", s.level],
       ["Собрано осколков", s.gold],
       ["Премия за боссов", s.bonus],
+      ["Премия за задания", s.quests],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
     if (won) rows.push(["Бонус за победу", "×1.50"]);
@@ -299,9 +378,12 @@ const UI = {
   },
 
   buildCollection() {
-    const needOf = id => {
-      const u = UNLOCKS.find(x => x.id === id);
-      return u ? u.text : "доступно сразу";
+    const st = unlockStats();
+    const unlockOf = id => UNLOCKS.find(x => x.id === id);
+    const needOf = id => { const u = unlockOf(id); return u ? u.text : "доступно сразу"; };
+    const progOf = id => {
+      const u = unlockOf(id);
+      return u ? unlockProgress(u, st).text : "";
     };
     const item = (id, def, sub, extra) => {
       const open = isUnlocked(id);
@@ -309,7 +391,7 @@ const UI = {
         svg(ICONS[def.ico], open ? def.color : "#4a5570") +
         '<span class="tx"><span class="nm">' + def.name + "</span>" +
         '<span class="sub">' + (open ? sub : needOf(id)) + "</span></span>" +
-        '<span class="mark">' + (open ? "✓" : "🔒") + "</span></div>";
+        '<span class="mark">' + (open ? "✓" : '<span class="prog">' + progOf(id) + "</span>") + "</span></div>";
     };
 
     let total = 0, got = 0, h = "";
@@ -463,7 +545,7 @@ function hotkeys() {
       else if (esc) UI.show("menu");
       break;
     case "play":
-      if (esc) { g.state = "pause"; UI.show("pause"); }
+      if (esc) { g.state = "pause"; UI.showPause(); }
       break;
     case "pause":
       if (esc || ent) { g.state = "play"; UI.hideAll(); clearPressed(); }
@@ -495,7 +577,7 @@ function frame(t) {
 
 /* авто-пауза при уходе со вкладки */
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && g.state === "play") { g.state = "pause"; UI.show("pause"); }
+  if (document.hidden && g.state === "play") { g.state = "pause"; UI.showPause(); }
 });
 
 /* ---------- старт ------------------------------------------------------ */

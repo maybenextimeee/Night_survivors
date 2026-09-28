@@ -545,22 +545,22 @@ const ENEMIES = [
 
 const BOSSES = [
   {
-    t: 300, name: "НАДЗИРАТЕЛЬ", hp: 2900, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
+    t: 240, name: "НАДЗИРАТЕЛЬ", hp: 2500, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
     ai: (g, e, dt) => { bossRadial(g, e, dt, 3.6, 12, 210); bossCharge(g, e, dt, 5.5, 430); }
   },
   {
-    t: 720, name: "ПОЖИРАТЕЛЬ", hp: 8600, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
+    t: 480, name: "ПОЖИРАТЕЛЬ", hp: 7000, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.13, 240); bossSummon(g, e, dt, 6, 5); bossCharge(g, e, dt, 7, 420); }
   },
   {
-    t: 1200, name: "ПОЛНОЧЬ", hp: 19500, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
+    t: 720, name: "ПОЛНОЧЬ", hp: 15000, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.1, 265); bossRadial(g, e, dt, 4.2, 22, 200); bossSummon(g, e, dt, 7, 7); bossCharge(g, e, dt, 5.2, 470); }
   },
-  /* Жнец: приходит на тридцатой минуте, когда забег уже засчитан.
+  /* Жнец: приходит на пятнадцатой минуте, когда забег уже засчитан.
      Здоровье у него есть, но убить его — задача для безумного билда;
      касание убивает наповал, броня не спасает. */
   {
-    t: 1800, name: "ЖНЕЦ", hp: 240000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
+    t: 900, name: "ЖНЕЦ", hp: 160000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
     shards: 900, final: true, reaper: true,
     ai: () => { }        // ничего не стреляет — просто догоняет и снимает с одного касания
   }
@@ -580,6 +580,7 @@ const META = [
   { id: "luck", name: "Радар", max: 3, cost: l => [110, 240, 450][l], d: l => "+" + (l * 5) + "% шанс элитного врага с сундуком" },
   { id: "revive", name: "Резервная копия", max: 1, cost: () => 650, d: () => "Один раз за забег поднимает с 50% здоровья" },
   { id: "reroll", name: "Реролл", max: 3, cost: l => [120, 260, 480][l], d: l => l + " переброса набора карт за забег" },
+  { id: "banish", name: "Изгнание", max: 3, cost: l => [140, 300, 540][l], d: l => "Можно выкинуть " + l + " предмет(а) из набора карт за забег" },
   { id: "growth", name: "Нейролинк", max: 5, cost: l => [60, 130, 240, 400, 620][l], d: l => "+" + (l * 4) + "% опыта за забег" },
   { id: "echo", name: "Эхо", max: 1, cost: () => 1200, d: () => "+1 снаряд всему оружию, которое считает снаряды" },
   { id: "curse", name: "Проклятие", max: 4, cost: l => [90, 180, 330, 560][l], d: l => "Враги на " + (l * 12) + "% злее, но осколков на " + (l * 25) + "% больше" }
@@ -607,24 +608,36 @@ const RARITY_ABILITY = 55;  // вес карты прокачки активно
    Условия считаются от накопленной статистики плюс текущего забега, чтобы
    открытие прилетало сразу в бою, а не только на экране итогов.          */
 const UNLOCKS = [
-  { id: "w:chain", kind: "Оружие", name: "Дуга", need: s => s.kills >= 400, text: "Убей 400 врагов" },
-  { id: "p:armor", kind: "Имплант", name: "Нанопанцирь", need: s => s.time >= 120, text: "Продержись 2:00 за забег" },
-  { id: "w:mines", kind: "Оружие", name: "Наномины", need: s => s.time >= 240, text: "Продержись 4:00 за забег" },
-  { id: "w:aura", kind: "Оружие", name: "Излучатель", need: s => s.props >= 25, text: "Разбей 25 неонок" },
-  { id: "p:greed", kind: "Имплант", name: "Дата-майнер", need: s => s.shards >= 400, text: "Накопи 400 осколков" },
-  { id: "w:flechette", kind: "Оружие", name: "Флешетты", need: s => s.level >= 8, text: "Достигни 8 уровня" },
-  { id: "c:scout", kind: "Оператор", name: "Скаут", need: s => s.time >= 600, text: "Продержись 10:00 за забег" },
-  { id: "p:dup", kind: "Имплант", name: "Дублер", need: s => s.maxed >= 1, text: "Прокачай оружие до максимума" },
-  { id: "w:missile", kind: "Оружие", name: "Ракеты", need: s => s.bosses >= 1, text: "Убей первого босса" },
-  { id: "w:disc", kind: "Оружие", name: "Диск", need: s => s.chests >= 3, text: "Открой 3 сундука" },
-  { id: "p:dura", kind: "Имплант", name: "Стабилизатор", need: s => s.time >= 420, text: "Продержись 7:00 за забег" },
-  { id: "w:acid", kind: "Оружие", name: "Кислота", need: s => s.kills >= 2000, text: "Убей 2000 врагов" },
-  { id: "c:chemist", kind: "Оператор", name: "Химик", need: s => s.props >= 100, text: "Разбей 100 неонок" },
-  { id: "p:luck", kind: "Имплант", name: "Талисман", need: s => s.props >= 60, text: "Разбей 60 неонок" },
-  { id: "p:growth", kind: "Имплант", name: "Апгрейд-чип", need: s => s.level >= 16, text: "Достигни 16 уровня" },
-  { id: "w:ricochet", kind: "Оружие", name: "Рикошет", need: s => s.time >= 720, text: "Продержись 12:00 за забег" },
-  { id: "c:lucky", kind: "Оператор", name: "Фартовый", need: s => s.chests >= 10, text: "Открой 10 сундуков" }
+  { id: "w:chain", kind: "Оружие", name: "Дуга", cur: s => s.kills, goal: 400, text: "Убей 400 врагов" },
+  { id: "p:armor", kind: "Имплант", name: "Нанопанцирь", cur: s => s.time, goal: 120, fmt: "t", text: "Продержись 2:00 за забег" },
+  { id: "w:mines", kind: "Оружие", name: "Наномины", cur: s => s.time, goal: 180, fmt: "t", text: "Продержись 3:00 за забег" },
+  { id: "w:aura", kind: "Оружие", name: "Излучатель", cur: s => s.props, goal: 25, text: "Разбей 25 неонок" },
+  { id: "p:greed", kind: "Имплант", name: "Дата-майнер", cur: s => s.shards, goal: 400, text: "Накопи 400 осколков" },
+  { id: "w:flechette", kind: "Оружие", name: "Флешетты", cur: s => s.level, goal: 8, text: "Достигни 8 уровня" },
+  { id: "c:scout", kind: "Оператор", name: "Скаут", cur: s => s.time, goal: 420, fmt: "t", text: "Продержись 7:00 за забег" },
+  { id: "p:dup", kind: "Имплант", name: "Дублер", cur: s => s.maxed, goal: 1, text: "Прокачай оружие до максимума" },
+  { id: "w:missile", kind: "Оружие", name: "Ракеты", cur: s => s.bosses, goal: 1, text: "Убей первого босса" },
+  { id: "w:disc", kind: "Оружие", name: "Диск", cur: s => s.chests, goal: 3, text: "Открой 3 сундука" },
+  { id: "p:dura", kind: "Имплант", name: "Стабилизатор", cur: s => s.time, goal: 300, fmt: "t", text: "Продержись 5:00 за забег" },
+  { id: "w:acid", kind: "Оружие", name: "Кислота", cur: s => s.kills, goal: 2000, text: "Убей 2000 врагов" },
+  { id: "c:chemist", kind: "Оператор", name: "Химик", cur: s => s.props, goal: 100, text: "Разбей 100 неонок" },
+  { id: "p:luck", kind: "Имплант", name: "Талисман", cur: s => s.props, goal: 60, text: "Разбей 60 неонок" },
+  { id: "p:growth", kind: "Имплант", name: "Апгрейд-чип", cur: s => s.level, goal: 16, text: "Достигни 16 уровня" },
+  { id: "w:ricochet", kind: "Оружие", name: "Рикошет", cur: s => s.time, goal: 540, fmt: "t", text: "Продержись 9:00 за забег" },
+  { id: "c:lucky", kind: "Оператор", name: "Фартовый", cur: s => s.chests, goal: 10, text: "Открой 10 сундуков" }
 ];
+/* прогресс условия: сколько набрано из нужного, в пригодном для показа виде */
+function unlockProgress(u, s) {
+  const cur = Math.min(u.cur(s), u.goal);
+  const fmt = v => u.fmt === "t" ? fmtTime(v) : Math.floor(v);
+  return { cur: cur, done: cur >= u.goal, text: fmt(cur) + " / " + fmt(u.goal) };
+}
+
+/* --- задания на забег ---------------------------------------------------
+   Три штуки выдаются случайно на старте и висят весь забег. Считают только
+   то, что уже открыто, иначе можно получить задание на недоступное.     */
+const QUEST_REWARD = { kill: 30, weapon: 40, evolve: 70 };
+const QUEST_KILL_GOALS = [120, 160, 200, 250];
 
 /* --- персонажи --------------------------------------------------------- */
 const CHARS = [

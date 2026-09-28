@@ -1,8 +1,11 @@
 /* ---------- 4. состояние забега --------------------------------------- */
-const RUN_LEN = 1800;         // 30 минут — полный забег, дальше выходит Жнец
-const CHEST_FIRST = 60;       // первый сундук — после первой минуты
-const CHEST_RUSH = 1200;      // с двадцатой минуты сундуки идут вдвое чаще
-const WAVE_EVERY = 180;       // большая волна раз в три минуты
+const RUN_LEN = 900;          // 15 минут — полный забег, дальше выходит Жнец
+const CHEST_FIRST = 45;       // первый сундук — через сорок пять секунд
+const CHEST_EVERY = 45;       // дальше раз в сорок пять секунд…
+const CHEST_RUSH = 600;       // …а с десятой минуты — почти вдвое чаще
+const CHEST_FAST = 25;
+const CHEST_GOLD_EVERY = 4;   // каждый четвёртый сундук — золотой
+const WAVE_EVERY = 120;       // большая волна раз в две минуты
 const WAVE_WARN = 2.5;        // столько секунд предупреждаем до её выхода
 const RUSH_PER_KILL = 0.025;  // +2.5% скорости за врага, убитого активным навыком…
 const RUSH_CAP = 0.3;         // …не выше +30%…
@@ -37,7 +40,8 @@ const g = {
   /* кто именно наносит урон прямо сейчас — источник пишется в статистику */
   dmgSource: null, dmgName: "", stats: {},
   waveT: 0, waveIdx: 0, waveHold: 0, warn: null,
-  runProps: 0, runChests: 0, runBosses: 0, runMaxed: 0, rerolls: 0, unlockT: 0
+  runProps: 0, runChests: 0, runBosses: 0, runMaxed: 0, rerolls: 0, unlockT: 0,
+  quests: [], questBonus: 0, banishes: 0, banished: []
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -106,6 +110,8 @@ function startRun() {
   g.waveT = WAVE_EVERY; g.waveIdx = 0; g.waveHold = 0; g.warn = null;
   g.runProps = 0; g.runChests = 0; g.runBosses = 0; g.runMaxed = 0;
   g.rerolls = metaLvl("reroll"); g.unlockT = 0;
+  g.banishes = metaLvl("banish"); g.banished.length = 0;
+  g.questBonus = 0;
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
   g.parts.length = g.nums.length = g.slashes.length = g.zaps.length = 0;
@@ -118,9 +124,11 @@ function startRun() {
   writeSave();
   /* «Предзагрузка» из мастерской — бесплатные апгрейды на старте */
   g.pendingUps = metaLvl("start");
+  g.quests = makeQuests();
   Sfx.init(); Sfx.resume();
   clearPressed();
   UI.enterPlay();
+  UI.showQuestIntro();
   if (g.pendingUps > 0) openLevelUp();
 }
 
@@ -172,6 +180,7 @@ function damageEnemy(e, dmg, dirX, dirY, kb, color) {
 function killEnemy(e) {
   e.dead = true;
   g.kills++;
+  if (!e.boss && e.def) questProgress("kill", e.def.id, 1);
   if (g.dmgSource) statOf(g.dmgSource, g.dmgName).kills++;
   const pl = g.p;
   /* префикс, а не точное равенство: ульта пишется как "ab:<id>:ult" */
@@ -204,7 +213,7 @@ function killEnemy(e) {
   dropGem(e.x, e.y, e.def.xp * (e.elite ? 4 : 1));
   /* сундук роняет только тот элитник, которого прислало расписание */
   if (e.chest) {
-    g.drops.push({ x: e.x, y: e.y, r: 12, type: "chest" });
+    g.drops.push({ x: e.x, y: e.y, r: e.gold ? 16 : 12, type: "chest", gold: !!e.gold });
   } else if (e.elite) {
     g.drops.push({ x: e.x, y: e.y, r: 8, type: "gold", v: 4 });
   } else if (Math.random() < 0.1) {
@@ -470,10 +479,10 @@ function difficulty() {
   const m = g.time / 60;
   const curseMul = 1 + metaLvl("curse") * 0.12;
   return {
-    hp: (1 + m * 0.8 + m * m * 0.1) * curseMul,
-    dmg: (1 + m * 0.2) * curseMul,
-    spd: 1 + Math.min(0.45, m * 0.03),
-    rate: Math.min(18, 2.6 + m * 1)
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul,
+    dmg: (1 + m * 0.32) * curseMul,
+    spd: 1 + Math.min(0.45, m * 0.048),
+    rate: Math.min(18, 2.6 + m * 1.6)
   };
 }
 function spawnEnemy(def, x, y, forceElite) {
@@ -515,7 +524,7 @@ function unlockedPick() {
 function spawnBoss(def) {
   const d = difficulty();
   const pos = spawnRing();
-  const hp = def.reaper ? def.hp : def.hp * (1 + g.time / 900);
+  const hp = def.reaper ? def.hp : def.hp * (1 + g.time / 450);
   const b = {
     def: def, boss: true, x: pos.x, y: pos.y, r: def.r, color: def.color,
     hp: hp, maxHp: hp, spd: def.spd, dmg: def.reaper ? def.dmg : def.dmg * d.dmg,
@@ -574,10 +583,16 @@ function director(dt) {
   if (g.time >= CHEST_FIRST) {
     g.chestT -= dt;
     if (g.chestT <= 0) {
-      g.chestT = g.time >= CHEST_RUSH ? 30 : 60;
+      g.chestT = g.time >= CHEST_RUSH ? CHEST_FAST : CHEST_EVERY;
       const pos = spawnRing();
       const e = spawnEnemy(unlockedPick(), pos.x, pos.y, true);
-      if (e) { e.chest = true; g.chests++; }
+      if (e) {
+        g.chests++;
+        e.chest = true;
+        /* каждый четвёртый несёт золотой — он даёт сразу несколько апгрейдов */
+        e.gold = g.chests % CHEST_GOLD_EVERY === 0;
+        if (e.gold) e.r *= 1.25;
+      }
     }
   }
 
@@ -621,7 +636,7 @@ function gainXp(v) {
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext;
     p.level++;
-    p.xpNext = Math.round(12 + 9 * p.level + p.level * p.level * 0.95);
+    p.xpNext = Math.round(10 + 7 * p.level + p.level * p.level * 0.62);
     g.pendingUps++;
   }
   if (g.pendingUps > 0 && g.state === "play") openLevelUp();
@@ -647,7 +662,7 @@ function buildCards() {
   const pool = [];
   for (let i = 0; i < p.weapons.length; i++) {
     const w = p.weapons[i], def = WEAPONS[w.id];
-    if (w.lvl < def.max)
+    if (w.lvl < def.max && g.banished.indexOf("w:" + w.base) < 0)
       pool.push({ kind: "wup", id: w.id, w: w, def: def, weight: (RARITY.w[w.base] || 60) * RARITY_OWNED });
   }
   if (p.weapons.length < MAX_WEAPONS) {
@@ -655,16 +670,18 @@ function buildCards() {
       const def = WEAPONS[id];
       if (def.evolved) continue;
       if (!isUnlocked("w:" + id)) continue;
+      if (g.banished.indexOf("w:" + id) >= 0) continue;
       if (p.weapons.some(w => w.base === id)) continue;   // сверяем базовый вид, не текущий
       pool.push({ kind: "wnew", id: id, def: def, weight: RARITY.w[id] || 60 });
     }
   }
-  if (p.abLvl < ABILITIES[p.ability].max)
+  if (p.abLvl < ABILITIES[p.ability].max && g.banished.indexOf("ab") < 0)
     pool.push({ kind: "abup", id: p.ability, def: ABILITIES[p.ability], lvl: p.abLvl, weight: RARITY_ABILITY });
   const pk = Object.keys(p.passives).length;
   for (const id in PASSIVES) {
     const def = PASSIVES[id], lvl = p.passives[id] || 0;
     if (!isUnlocked("p:" + id)) continue;
+    if (g.banished.indexOf("p:" + id) >= 0) continue;
     if (lvl >= def.max) continue;
     if (lvl === 0 && pk >= MAX_PASSIVES) continue;
     pool.push({
@@ -731,6 +748,7 @@ function tryEvolve() {
   w.lvl = 1;
   w.t = 0;
   w.hits = new Map();
+  questProgress("evolve", w.base, 1);
   recalc(p);
   UI.syncRack();
   UI.toast("✦ " + def.name.toUpperCase());
@@ -752,7 +770,7 @@ function applyCard(c) {
     c.w.lvl++;
     if (c.w.lvl >= WEAPONS[c.w.id].max) g.runMaxed++;
   }
-  else if (c.kind === "wnew") { addWeapon(p, c.id); }
+  else if (c.kind === "wnew") { addWeapon(p, c.id); questProgress("weapon", c.id, 1); }
   else if (c.kind === "abup") { p.abLvl++; UI.syncSkill(); }
   else if (c.kind === "pup" || c.kind === "pnew") { p.passives[c.id] = (p.passives[c.id] || 0) + 1; }
   else if (c.kind === "heal") { p.hp = Math.min(p.maxHp, p.hp + 40); }
@@ -790,6 +808,97 @@ function hurtPlayer(dmg) {
   }
 }
 
+
+/* ---------- задания на забег ------------------------------------------
+   Три штуки на старте, висят до конца. Берём только то, что уже открыто,
+   иначе выпадет задание на недоступное оружие.                          */
+function enemyIcon(def, color) {
+  const n = def.shape || 6, pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * TAU / n;
+    pts.push((12 + Math.cos(a) * 8).toFixed(1) + "," + (12 + Math.sin(a) * 8).toFixed(1));
+  }
+  return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="' + color +
+    '" stroke-width="1.8" stroke-linejoin="round"><polygon points="' + pts.join(" ") + '"/></svg>';
+}
+
+function makeQuests() {
+  const p = g.p, pool = [];
+  for (let i = 0; i < ENEMIES.length; i++) {
+    const def = ENEMIES[i];
+    if (def.from > RUN_LEN * 0.6) continue;          // кого не успеешь встретить — не предлагаем
+    pool.push({
+      kind: "kill", key: def.id, name: def.name, color: def.color, icon: enemyIcon(def, def.color),
+      goal: pick(QUEST_KILL_GOALS), reward: QUEST_REWARD.kill, label: "Убей"
+    });
+  }
+  for (const id in WEAPONS) {
+    const def = WEAPONS[id];
+    if (def.evolved || !isUnlocked("w:" + id)) continue;
+    if (p.weapons.some(w => w.base === id)) continue;
+    pool.push({
+      kind: "weapon", key: id, name: def.name, color: def.color, icon: svg(ICONS[def.ico], def.color),
+      goal: 1, reward: QUEST_REWARD.weapon, label: "Возьми"
+    });
+  }
+  for (const id in WEAPONS) {
+    const def = WEAPONS[id];
+    if (def.evolved || !def.evoTo) continue;
+    if (!isUnlocked("w:" + id) || !isUnlocked("p:" + def.evoNeed)) continue;
+    const evo = WEAPONS[def.evoTo];
+    pool.push({
+      kind: "evolve", key: id, name: evo.name, color: "#ffc23d", icon: svg(ICONS[evo.ico], "#ffc23d"),
+      goal: 1, reward: QUEST_REWARD.evolve, label: "Собери"
+    });
+  }
+  shuffle(pool);
+  /* по одному каждого вида, остальное добираем чем есть */
+  const out = [];
+  ["kill", "weapon", "evolve"].forEach(k => {
+    const q = pool.find(x => x.kind === k && out.indexOf(x) < 0);
+    if (q) out.push(q);
+  });
+  for (let i = 0; i < pool.length && out.length < 3; i++)
+    if (out.indexOf(pool[i]) < 0) out.push(pool[i]);
+  const list = out.slice(0, 3);
+  list.forEach(q => { q.have = 0; q.done = false; });
+  return list;
+}
+
+function questProgress(kind, key, amount) {
+  for (let i = 0; i < g.quests.length; i++) {
+    const q = g.quests[i];
+    if (q.done || q.kind !== kind || q.key !== key) continue;
+    q.have += amount || 1;
+    if (q.have >= q.goal) {
+      q.have = q.goal;
+      q.done = true;
+      g.questBonus += q.reward;
+      g.gold += q.reward;
+      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ◈");
+      Sfx.ultReady();
+    }
+  }
+}
+
+/* ---------- изгнание карты --------------------------------------------- */
+function cardKey(c) {
+  if (c.kind === "wup" || c.kind === "wnew") return "w:" + (c.w ? c.w.base : c.id);
+  if (c.kind === "pup" || c.kind === "pnew") return "p:" + c.id;
+  if (c.kind === "abup") return "ab";
+  return null;
+}
+function canBanish(c) { return g.banishes > 0 && cardKey(c) !== null; }
+function banishCard(c) {
+  const key = cardKey(c);
+  if (!key || g.banishes <= 0) return;
+  g.banishes--;
+  g.banished.push(key);
+  Sfx.empty();
+  UI.toast("ИЗГНАНО: " + c.def.name.toUpperCase());
+  UI.showCards(buildCards());
+}
+
 /* ---------- открытия --------------------------------------------------
    Считаем от накопленной статистики плюс текущий забег: открытие прилетает
    сразу в бою. В endRun забег сперва вливается в totals, а счётчики
@@ -812,7 +921,7 @@ function checkUnlocks() {
   let opened = 0;
   for (let i = 0; i < UNLOCKS.length; i++) {
     const u = UNLOCKS[i];
-    if (isUnlocked(u.id) || !u.need(s)) continue;
+    if (isUnlocked(u.id) || u.cur(s) < u.goal) continue;
     save.unlocked.push(u.id);
     opened++;
     UI.toast("★ ОТКРЫТО: " + u.name.toUpperCase());
@@ -845,7 +954,7 @@ function endRun(won) {
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
-    bonus: g.bonus, mins: mins, total: total, greed: p.greedMul
+    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul
   });
 }
 
@@ -1213,13 +1322,16 @@ function update(dt) {
         else if (d.type === "magnet") { pullEverything(); Sfx.evo(); UI.toast("МАГНИТ"); }
         else if (d.type === "heal") { p.hp = Math.min(p.maxHp, p.hp + d.v); Sfx.pick(); UI.toast("+" + d.v + " HP"); }
         else if (d.type === "chest") {
-          g.gold += 12;
+          const golden = !!d.gold;
+          g.gold += golden ? 30 : 12;
           g.runChests++;
-          /* сундук сперва пытается эволюционировать оружие, и только если
-             эволюционировать нечего — даёт обычный бесплатный апгрейд */
-          if (!tryEvolve()) {
-            g.pendingUps++;
-            UI.toast("СУНДУК");
+          /* сундук сперва пытается эволюционировать оружие; золотой сверх
+             того сыплет апгрейдами, обычный — ровно одним */
+          const evolved = tryEvolve();
+          const ups = golden ? (evolved ? 2 : 3) : (evolved ? 0 : 1);
+          if (ups > 0) {
+            g.pendingUps += ups;
+            UI.toast(golden ? "★ ЗОЛОТОЙ СУНДУК" : "СУНДУК");
             if (g.state === "play") openLevelUp();
           }
         }

@@ -19,7 +19,7 @@ $head = @'
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 30 минут в неоновом квартале.">
+<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 15 минут в неоновом квартале.">
 </head>
 <body>
 '@

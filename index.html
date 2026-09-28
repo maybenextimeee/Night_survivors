@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 30 минут в неоновом квартале.">
+<meta name="description" content="Night survivors — HTML5 survivors-like: продержись 15 минут в неоновом квартале.">
 </head>
 <body>
 <title>Night survivors</title>
@@ -104,6 +104,11 @@ body{
 .slot.evo .pips i.f{background:var(--gold)}
 .slot.pas .pips i.f{background:var(--violet)}
 .slot.empty{height:32px;border-style:dashed;opacity:.4;background:rgba(13,18,32,.45)}
+/* связка собрана — осталось добежать до сундука */
+.slot.evoready{border-color:var(--gold);animation:evoglow 1.1s ease-in-out infinite}
+.slot.evoready .nm{color:var(--gold)}
+@keyframes evoglow{0%,100%{box-shadow:0 0 6px rgba(255,194,61,.35)}
+  50%{box-shadow:0 0 20px rgba(255,194,61,.85)}}
 #dash{position:fixed;right:18px;bottom:16px;z-index:4;display:none;align-items:center;gap:8px;
   font-family:var(--mono);font-size:11px;color:var(--muted)}
 #dash.on{display:flex}
@@ -260,6 +265,74 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .tbl .tot{color:var(--gold);font-weight:600}
 .tbl hr{grid-column:1/-1;border:none;border-top:1px solid var(--line);margin:4px 0}
 
+/* --- задания забега: полупрозрачно висят слева --- */
+#quests{position:fixed;left:18px;top:104px;z-index:4;display:none;flex-direction:column;gap:5px;
+  width:236px;pointer-events:none;opacity:.62;transition:opacity .2s}
+#quests.on{display:flex}
+.qrow{display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(8,12,22,.72);
+  border:1px solid var(--line);border-left-width:3px}
+.qrow .ico{width:20px;height:20px;flex:none}
+.qrow .qt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.qrow .qn{font-family:var(--mono);font-size:10px;letter-spacing:.3px;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qrow .qbar{position:relative;height:4px;background:#0a0f1c;border:1px solid var(--line)}
+.qrow .qbar i{position:absolute;left:0;top:0;bottom:0;transition:width .2s linear}
+.qrow .qv{font-family:var(--mono);font-size:9px;color:var(--muted);flex:none;
+  font-variant-numeric:tabular-nums}
+.qrow.done{opacity:.55}
+.qrow.done .qn{text-decoration:line-through;color:var(--muted)}
+
+/* заставка с заданиями в начале забега */
+#questIntro{position:fixed;inset:0;z-index:9;display:none;place-items:center;pointer-events:none}
+#questIntro.on{display:grid;animation:qiFade 3.4s ease forwards}
+@keyframes qiFade{0%{opacity:0}8%{opacity:1}72%{opacity:1}100%{opacity:0}}
+.qi-inner{text-align:center;animation:qiRise 3.4s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes qiRise{0%{transform:translateY(22px) scale(.94)}12%{transform:none}
+  74%{transform:none}100%{transform:translateY(-70px) scale(.72)}}
+.qi-head{font-family:var(--mono);font-size:12px;letter-spacing:5px;text-transform:uppercase;
+  color:var(--gold);margin:0 0 16px;text-shadow:0 0 20px rgba(255,194,61,.5)}
+.qi-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.qi-card{display:flex;align-items:center;gap:12px;padding:16px 22px;min-width:260px;
+  background:linear-gradient(180deg,rgba(19,26,44,.97),rgba(10,14,25,.97));
+  border:1px solid var(--line);border-left:3px solid var(--gold);
+  box-shadow:0 12px 40px rgba(0,0,0,.6);animation:qiPop .5s backwards}
+.qi-card:nth-child(2){animation-delay:.14s}
+.qi-card:nth-child(3){animation-delay:.28s}
+@keyframes qiPop{from{opacity:0;transform:translateY(16px) scale(.9)}}
+.qi-card .ico{width:34px;height:34px;flex:none}
+.qi-card .qi-t{text-align:left}
+.qi-card .qi-l{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted)}
+.qi-card .qi-n{font-family:var(--display);font-size:17px;letter-spacing:.6px;text-transform:uppercase}
+.qi-card .qi-r{font-family:var(--mono);font-size:11px;color:var(--gold);margin-top:2px}
+
+/* задания на паузе — крупнее и ярче, чем в бою */
+.qpause{display:flex;flex-direction:column;gap:8px;margin:0 0 18px}
+.qpause .qrow{padding:9px 12px;background:var(--panel-2);opacity:1}
+.qpause .qrow .qn{font-size:12px}
+.qpause .qrow .ico{width:24px;height:24px}
+
+/* статы на паузе */
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;
+  margin:0 0 18px;padding-top:14px;border-top:1px solid var(--line)}
+.statgrid div{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);
+  font-size:11px;font-variant-numeric:tabular-nums}
+.statgrid span{color:var(--muted)}
+.statgrid b{color:var(--ink);font-weight:600}
+
+/* изгнание карты */
+.banishhint{display:none;text-align:center;margin-top:14px}
+.banishhint.on{display:block}
+.card .ban{position:absolute;right:6px;top:6px;width:22px;height:22px;display:none;
+  align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;line-height:1;
+  color:var(--muted);background:rgba(8,12,22,.9);border:1px solid var(--line);cursor:pointer}
+.card.canban .ban{display:flex}
+.card .ban:hover{color:var(--magenta);border-color:var(--magenta)}
+
+/* рамка карты по редкости */
+.card.rare-2{border-color:#2f6f7d}
+.card.rare-3{border-color:var(--violet);box-shadow:0 0 18px rgba(168,107,255,.16)}
+
 /* --- коллекция: что открыто и что для этого нужно --- */
 .colgrid{margin-top:16px;max-height:58vh;overflow-y:auto;overflow-x:hidden;padding-right:6px;
   display:flex;flex-direction:column;gap:18px}
@@ -275,6 +348,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
 .colit .sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .colit .mark{font-family:var(--mono);font-size:14px;color:var(--lime);flex:none}
+.colit .prog{font-size:10px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap}
 .colit.locked{opacity:.55;border-style:dashed}
 .colit.locked .nm{color:var(--muted)}
 .colit.locked .sub{color:var(--gold)}
@@ -349,6 +423,13 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   </div>
 </div>
 
+<div id="quests"></div>
+
+<div id="questIntro"><div class="qi-inner">
+  <p class="qi-head">Задания на забег</p>
+  <div class="qi-row" id="questIntroRow"></div>
+</div></div>
+
 <div id="rack"><div class="rackcol" id="rackW"></div><div class="rackcol" id="rackP"></div></div>
 <div id="skill">
   <span id="skillIco"></span><span class="nm" id="skillName">ФАНТОМ</span>
@@ -365,7 +446,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <h1>Night<br><em>survivors</em></h1>
     <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
       что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться
-      тридцать минут.</p>
+      пятнадцать минут.</p>
     <div class="menu">
       <button class="primary" id="bPlay">Начать забег <span class="k">ENTER</span></button>
       <button id="bShop">Мастерская <span class="k" id="kShards">0 ◈</span></button>
@@ -396,12 +477,13 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
     <h2 style="margin-top:26px">Как это работает</h2>
     <p class="lede">Враги рассыпаются на <span style="color:var(--lime)">дата-кристаллы</span> — подбирай их и выбирай
       апгрейды. Прокачанный до максимума модуль <span style="color:var(--gold)">эволюционирует</span>, если
-      у тебя есть нужный имплант. Боссы выходят на 5:00, 12:00 и 20:00.</p>
-    <p class="lede">Сундук приносит бесплатный апгрейд, но достаётся он не даром: с первой минуты
-      раз в минуту приходит помеченный элитник, и сундук нужно выбить из него. После 20:00 такие
-      элитники идут вдвое чаще. Доживи до <b style="color:var(--ink)">30:00</b> — забег засчитан,
-      но за тобой придёт <span style="color:var(--magenta)">Жнец</span>: он быстрее тебя и убивает
-      с одного касания.</p>
+      у тебя есть нужный имплант. Боссы выходят на 4:00, 8:00 и 12:00.</p>
+    <p class="lede">Сундук приносит бесплатный апгрейд, а каждый четвёртый —
+      <b style="color:var(--gold)">золотой</b> и даёт сразу несколько. Достаётся он не даром:
+      помеченного элитника нужно выбить, первый приходит на 00:45, дальше раз в 45 секунд,
+      а после 10:00 — почти вдвое чаще. Доживи до <b style="color:var(--ink)">15:00</b> — забег
+      засчитан, но за тобой придёт <span style="color:var(--magenta)">Жнец</span>: он быстрее тебя
+      и убивает с одного касания.</p>
     <p class="lede">По кварталу разбросаны <span style="color:var(--gold)">неонки</span> — ломай их любым
       уроном по площади. Внутри бывает аптечка или <span style="color:var(--cyan)">магнит</span>, который
       разом стягивает к тебе весь опыт и все аптечки с карты.</p>
@@ -453,6 +535,7 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="panel">
     <p class="eyebrow" style="text-align:center">Уровень <span id="luLvl">2</span> — выбери одно</p>
     <div class="cards" id="cardRow"></div>
+    <p class="hint banishhint" id="banishHint">Крестик на карте — изгнать предмет до конца забега · осталось <b id="banishLeft">0</b></p>
     <button class="reroll" id="rerollBtn">Переброс <span class="cnt" id="rerollLeft">0</span><span class="k">R</span></button>
     <label class="remember" id="remember">
       <input type="checkbox" id="rememberBox">
@@ -465,6 +548,8 @@ button .k{font-family:var(--mono);font-size:10px;color:var(--muted);float:right;
   <div class="panel" style="width:min(520px,100%)">
     <p class="eyebrow">Забег приостановлен</p>
     <h2>Пауза</h2>
+    <div class="qpause" id="questPause"></div>
+    <div class="statgrid" id="pauseStats"></div>
     <div class="menu">
       <button class="primary" id="bResume">Продолжить <span class="k">ESC</span></button>
       <button id="bQuit">Бросить забег</button>
@@ -1281,22 +1366,22 @@ const ENEMIES = [
 
 const BOSSES = [
   {
-    t: 300, name: "НАДЗИРАТЕЛЬ", hp: 2900, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
+    t: 240, name: "НАДЗИРАТЕЛЬ", hp: 2500, r: 42, spd: 52, dmg: 26, xp: 60, color: "#ff2f6e", shards: 40,
     ai: (g, e, dt) => { bossRadial(g, e, dt, 3.6, 12, 210); bossCharge(g, e, dt, 5.5, 430); }
   },
   {
-    t: 720, name: "ПОЖИРАТЕЛЬ", hp: 8600, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
+    t: 480, name: "ПОЖИРАТЕЛЬ", hp: 7000, r: 52, spd: 46, dmg: 32, xp: 140, color: "#ff2f6e", shards: 90,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.13, 240); bossSummon(g, e, dt, 6, 5); bossCharge(g, e, dt, 7, 420); }
   },
   {
-    t: 1200, name: "ПОЛНОЧЬ", hp: 19500, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
+    t: 720, name: "ПОЛНОЧЬ", hp: 15000, r: 62, spd: 50, dmg: 40, xp: 400, color: "#ff2f6e", shards: 260,
     ai: (g, e, dt) => { bossSpiral(g, e, dt, 0.1, 265); bossRadial(g, e, dt, 4.2, 22, 200); bossSummon(g, e, dt, 7, 7); bossCharge(g, e, dt, 5.2, 470); }
   },
-  /* Жнец: приходит на тридцатой минуте, когда забег уже засчитан.
+  /* Жнец: приходит на пятнадцатой минуте, когда забег уже засчитан.
      Здоровье у него есть, но убить его — задача для безумного билда;
      касание убивает наповал, броня не спасает. */
   {
-    t: 1800, name: "ЖНЕЦ", hp: 240000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
+    t: 900, name: "ЖНЕЦ", hp: 160000, r: 50, spd: 265, dmg: 99999, xp: 0, color: "#ff2f6e",
     shards: 900, final: true, reaper: true,
     ai: () => { }        // ничего не стреляет — просто догоняет и снимает с одного касания
   }
@@ -1316,6 +1401,7 @@ const META = [
   { id: "luck", name: "Радар", max: 3, cost: l => [110, 240, 450][l], d: l => "+" + (l * 5) + "% шанс элитного врага с сундуком" },
   { id: "revive", name: "Резервная копия", max: 1, cost: () => 650, d: () => "Один раз за забег поднимает с 50% здоровья" },
   { id: "reroll", name: "Реролл", max: 3, cost: l => [120, 260, 480][l], d: l => l + " переброса набора карт за забег" },
+  { id: "banish", name: "Изгнание", max: 3, cost: l => [140, 300, 540][l], d: l => "Можно выкинуть " + l + " предмет(а) из набора карт за забег" },
   { id: "growth", name: "Нейролинк", max: 5, cost: l => [60, 130, 240, 400, 620][l], d: l => "+" + (l * 4) + "% опыта за забег" },
   { id: "echo", name: "Эхо", max: 1, cost: () => 1200, d: () => "+1 снаряд всему оружию, которое считает снаряды" },
   { id: "curse", name: "Проклятие", max: 4, cost: l => [90, 180, 330, 560][l], d: l => "Враги на " + (l * 12) + "% злее, но осколков на " + (l * 25) + "% больше" }
@@ -1343,24 +1429,36 @@ const RARITY_ABILITY = 55;  // вес карты прокачки активно
    Условия считаются от накопленной статистики плюс текущего забега, чтобы
    открытие прилетало сразу в бою, а не только на экране итогов.          */
 const UNLOCKS = [
-  { id: "w:chain", kind: "Оружие", name: "Дуга", need: s => s.kills >= 400, text: "Убей 400 врагов" },
-  { id: "p:armor", kind: "Имплант", name: "Нанопанцирь", need: s => s.time >= 120, text: "Продержись 2:00 за забег" },
-  { id: "w:mines", kind: "Оружие", name: "Наномины", need: s => s.time >= 240, text: "Продержись 4:00 за забег" },
-  { id: "w:aura", kind: "Оружие", name: "Излучатель", need: s => s.props >= 25, text: "Разбей 25 неонок" },
-  { id: "p:greed", kind: "Имплант", name: "Дата-майнер", need: s => s.shards >= 400, text: "Накопи 400 осколков" },
-  { id: "w:flechette", kind: "Оружие", name: "Флешетты", need: s => s.level >= 8, text: "Достигни 8 уровня" },
-  { id: "c:scout", kind: "Оператор", name: "Скаут", need: s => s.time >= 600, text: "Продержись 10:00 за забег" },
-  { id: "p:dup", kind: "Имплант", name: "Дублер", need: s => s.maxed >= 1, text: "Прокачай оружие до максимума" },
-  { id: "w:missile", kind: "Оружие", name: "Ракеты", need: s => s.bosses >= 1, text: "Убей первого босса" },
-  { id: "w:disc", kind: "Оружие", name: "Диск", need: s => s.chests >= 3, text: "Открой 3 сундука" },
-  { id: "p:dura", kind: "Имплант", name: "Стабилизатор", need: s => s.time >= 420, text: "Продержись 7:00 за забег" },
-  { id: "w:acid", kind: "Оружие", name: "Кислота", need: s => s.kills >= 2000, text: "Убей 2000 врагов" },
-  { id: "c:chemist", kind: "Оператор", name: "Химик", need: s => s.props >= 100, text: "Разбей 100 неонок" },
-  { id: "p:luck", kind: "Имплант", name: "Талисман", need: s => s.props >= 60, text: "Разбей 60 неонок" },
-  { id: "p:growth", kind: "Имплант", name: "Апгрейд-чип", need: s => s.level >= 16, text: "Достигни 16 уровня" },
-  { id: "w:ricochet", kind: "Оружие", name: "Рикошет", need: s => s.time >= 720, text: "Продержись 12:00 за забег" },
-  { id: "c:lucky", kind: "Оператор", name: "Фартовый", need: s => s.chests >= 10, text: "Открой 10 сундуков" }
+  { id: "w:chain", kind: "Оружие", name: "Дуга", cur: s => s.kills, goal: 400, text: "Убей 400 врагов" },
+  { id: "p:armor", kind: "Имплант", name: "Нанопанцирь", cur: s => s.time, goal: 120, fmt: "t", text: "Продержись 2:00 за забег" },
+  { id: "w:mines", kind: "Оружие", name: "Наномины", cur: s => s.time, goal: 180, fmt: "t", text: "Продержись 3:00 за забег" },
+  { id: "w:aura", kind: "Оружие", name: "Излучатель", cur: s => s.props, goal: 25, text: "Разбей 25 неонок" },
+  { id: "p:greed", kind: "Имплант", name: "Дата-майнер", cur: s => s.shards, goal: 400, text: "Накопи 400 осколков" },
+  { id: "w:flechette", kind: "Оружие", name: "Флешетты", cur: s => s.level, goal: 8, text: "Достигни 8 уровня" },
+  { id: "c:scout", kind: "Оператор", name: "Скаут", cur: s => s.time, goal: 420, fmt: "t", text: "Продержись 7:00 за забег" },
+  { id: "p:dup", kind: "Имплант", name: "Дублер", cur: s => s.maxed, goal: 1, text: "Прокачай оружие до максимума" },
+  { id: "w:missile", kind: "Оружие", name: "Ракеты", cur: s => s.bosses, goal: 1, text: "Убей первого босса" },
+  { id: "w:disc", kind: "Оружие", name: "Диск", cur: s => s.chests, goal: 3, text: "Открой 3 сундука" },
+  { id: "p:dura", kind: "Имплант", name: "Стабилизатор", cur: s => s.time, goal: 300, fmt: "t", text: "Продержись 5:00 за забег" },
+  { id: "w:acid", kind: "Оружие", name: "Кислота", cur: s => s.kills, goal: 2000, text: "Убей 2000 врагов" },
+  { id: "c:chemist", kind: "Оператор", name: "Химик", cur: s => s.props, goal: 100, text: "Разбей 100 неонок" },
+  { id: "p:luck", kind: "Имплант", name: "Талисман", cur: s => s.props, goal: 60, text: "Разбей 60 неонок" },
+  { id: "p:growth", kind: "Имплант", name: "Апгрейд-чип", cur: s => s.level, goal: 16, text: "Достигни 16 уровня" },
+  { id: "w:ricochet", kind: "Оружие", name: "Рикошет", cur: s => s.time, goal: 540, fmt: "t", text: "Продержись 9:00 за забег" },
+  { id: "c:lucky", kind: "Оператор", name: "Фартовый", cur: s => s.chests, goal: 10, text: "Открой 10 сундуков" }
 ];
+/* прогресс условия: сколько набрано из нужного, в пригодном для показа виде */
+function unlockProgress(u, s) {
+  const cur = Math.min(u.cur(s), u.goal);
+  const fmt = v => u.fmt === "t" ? fmtTime(v) : Math.floor(v);
+  return { cur: cur, done: cur >= u.goal, text: fmt(cur) + " / " + fmt(u.goal) };
+}
+
+/* --- задания на забег ---------------------------------------------------
+   Три штуки выдаются случайно на старте и висят весь забег. Считают только
+   то, что уже открыто, иначе можно получить задание на недоступное.     */
+const QUEST_REWARD = { kill: 30, weapon: 40, evolve: 70 };
+const QUEST_KILL_GOALS = [120, 160, 200, 250];
 
 /* --- персонажи --------------------------------------------------------- */
 const CHARS = [
@@ -1397,10 +1495,13 @@ const CHARS = [
 ];
 
 /* ---------- 4. состояние забега --------------------------------------- */
-const RUN_LEN = 1800;         // 30 минут — полный забег, дальше выходит Жнец
-const CHEST_FIRST = 60;       // первый сундук — после первой минуты
-const CHEST_RUSH = 1200;      // с двадцатой минуты сундуки идут вдвое чаще
-const WAVE_EVERY = 180;       // большая волна раз в три минуты
+const RUN_LEN = 900;          // 15 минут — полный забег, дальше выходит Жнец
+const CHEST_FIRST = 45;       // первый сундук — через сорок пять секунд
+const CHEST_EVERY = 45;       // дальше раз в сорок пять секунд…
+const CHEST_RUSH = 600;       // …а с десятой минуты — почти вдвое чаще
+const CHEST_FAST = 25;
+const CHEST_GOLD_EVERY = 4;   // каждый четвёртый сундук — золотой
+const WAVE_EVERY = 120;       // большая волна раз в две минуты
 const WAVE_WARN = 2.5;        // столько секунд предупреждаем до её выхода
 const RUSH_PER_KILL = 0.025;  // +2.5% скорости за врага, убитого активным навыком…
 const RUSH_CAP = 0.3;         // …не выше +30%…
@@ -1435,7 +1536,8 @@ const g = {
   /* кто именно наносит урон прямо сейчас — источник пишется в статистику */
   dmgSource: null, dmgName: "", stats: {},
   waveT: 0, waveIdx: 0, waveHold: 0, warn: null,
-  runProps: 0, runChests: 0, runBosses: 0, runMaxed: 0, rerolls: 0, unlockT: 0
+  runProps: 0, runChests: 0, runBosses: 0, runMaxed: 0, rerolls: 0, unlockT: 0,
+  quests: [], questBonus: 0, banishes: 0, banished: []
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -1504,6 +1606,8 @@ function startRun() {
   g.waveT = WAVE_EVERY; g.waveIdx = 0; g.waveHold = 0; g.warn = null;
   g.runProps = 0; g.runChests = 0; g.runBosses = 0; g.runMaxed = 0;
   g.rerolls = metaLvl("reroll"); g.unlockT = 0;
+  g.banishes = metaLvl("banish"); g.banished.length = 0;
+  g.questBonus = 0;
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
   g.parts.length = g.nums.length = g.slashes.length = g.zaps.length = 0;
@@ -1516,9 +1620,11 @@ function startRun() {
   writeSave();
   /* «Предзагрузка» из мастерской — бесплатные апгрейды на старте */
   g.pendingUps = metaLvl("start");
+  g.quests = makeQuests();
   Sfx.init(); Sfx.resume();
   clearPressed();
   UI.enterPlay();
+  UI.showQuestIntro();
   if (g.pendingUps > 0) openLevelUp();
 }
 
@@ -1570,6 +1676,7 @@ function damageEnemy(e, dmg, dirX, dirY, kb, color) {
 function killEnemy(e) {
   e.dead = true;
   g.kills++;
+  if (!e.boss && e.def) questProgress("kill", e.def.id, 1);
   if (g.dmgSource) statOf(g.dmgSource, g.dmgName).kills++;
   const pl = g.p;
   /* префикс, а не точное равенство: ульта пишется как "ab:<id>:ult" */
@@ -1602,7 +1709,7 @@ function killEnemy(e) {
   dropGem(e.x, e.y, e.def.xp * (e.elite ? 4 : 1));
   /* сундук роняет только тот элитник, которого прислало расписание */
   if (e.chest) {
-    g.drops.push({ x: e.x, y: e.y, r: 12, type: "chest" });
+    g.drops.push({ x: e.x, y: e.y, r: e.gold ? 16 : 12, type: "chest", gold: !!e.gold });
   } else if (e.elite) {
     g.drops.push({ x: e.x, y: e.y, r: 8, type: "gold", v: 4 });
   } else if (Math.random() < 0.1) {
@@ -1868,10 +1975,10 @@ function difficulty() {
   const m = g.time / 60;
   const curseMul = 1 + metaLvl("curse") * 0.12;
   return {
-    hp: (1 + m * 0.8 + m * m * 0.1) * curseMul,
-    dmg: (1 + m * 0.2) * curseMul,
-    spd: 1 + Math.min(0.45, m * 0.03),
-    rate: Math.min(18, 2.6 + m * 1)
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul,
+    dmg: (1 + m * 0.32) * curseMul,
+    spd: 1 + Math.min(0.45, m * 0.048),
+    rate: Math.min(18, 2.6 + m * 1.6)
   };
 }
 function spawnEnemy(def, x, y, forceElite) {
@@ -1913,7 +2020,7 @@ function unlockedPick() {
 function spawnBoss(def) {
   const d = difficulty();
   const pos = spawnRing();
-  const hp = def.reaper ? def.hp : def.hp * (1 + g.time / 900);
+  const hp = def.reaper ? def.hp : def.hp * (1 + g.time / 450);
   const b = {
     def: def, boss: true, x: pos.x, y: pos.y, r: def.r, color: def.color,
     hp: hp, maxHp: hp, spd: def.spd, dmg: def.reaper ? def.dmg : def.dmg * d.dmg,
@@ -1972,10 +2079,16 @@ function director(dt) {
   if (g.time >= CHEST_FIRST) {
     g.chestT -= dt;
     if (g.chestT <= 0) {
-      g.chestT = g.time >= CHEST_RUSH ? 30 : 60;
+      g.chestT = g.time >= CHEST_RUSH ? CHEST_FAST : CHEST_EVERY;
       const pos = spawnRing();
       const e = spawnEnemy(unlockedPick(), pos.x, pos.y, true);
-      if (e) { e.chest = true; g.chests++; }
+      if (e) {
+        g.chests++;
+        e.chest = true;
+        /* каждый четвёртый несёт золотой — он даёт сразу несколько апгрейдов */
+        e.gold = g.chests % CHEST_GOLD_EVERY === 0;
+        if (e.gold) e.r *= 1.25;
+      }
     }
   }
 
@@ -2019,7 +2132,7 @@ function gainXp(v) {
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext;
     p.level++;
-    p.xpNext = Math.round(12 + 9 * p.level + p.level * p.level * 0.95);
+    p.xpNext = Math.round(10 + 7 * p.level + p.level * p.level * 0.62);
     g.pendingUps++;
   }
   if (g.pendingUps > 0 && g.state === "play") openLevelUp();
@@ -2045,7 +2158,7 @@ function buildCards() {
   const pool = [];
   for (let i = 0; i < p.weapons.length; i++) {
     const w = p.weapons[i], def = WEAPONS[w.id];
-    if (w.lvl < def.max)
+    if (w.lvl < def.max && g.banished.indexOf("w:" + w.base) < 0)
       pool.push({ kind: "wup", id: w.id, w: w, def: def, weight: (RARITY.w[w.base] || 60) * RARITY_OWNED });
   }
   if (p.weapons.length < MAX_WEAPONS) {
@@ -2053,16 +2166,18 @@ function buildCards() {
       const def = WEAPONS[id];
       if (def.evolved) continue;
       if (!isUnlocked("w:" + id)) continue;
+      if (g.banished.indexOf("w:" + id) >= 0) continue;
       if (p.weapons.some(w => w.base === id)) continue;   // сверяем базовый вид, не текущий
       pool.push({ kind: "wnew", id: id, def: def, weight: RARITY.w[id] || 60 });
     }
   }
-  if (p.abLvl < ABILITIES[p.ability].max)
+  if (p.abLvl < ABILITIES[p.ability].max && g.banished.indexOf("ab") < 0)
     pool.push({ kind: "abup", id: p.ability, def: ABILITIES[p.ability], lvl: p.abLvl, weight: RARITY_ABILITY });
   const pk = Object.keys(p.passives).length;
   for (const id in PASSIVES) {
     const def = PASSIVES[id], lvl = p.passives[id] || 0;
     if (!isUnlocked("p:" + id)) continue;
+    if (g.banished.indexOf("p:" + id) >= 0) continue;
     if (lvl >= def.max) continue;
     if (lvl === 0 && pk >= MAX_PASSIVES) continue;
     pool.push({
@@ -2129,6 +2244,7 @@ function tryEvolve() {
   w.lvl = 1;
   w.t = 0;
   w.hits = new Map();
+  questProgress("evolve", w.base, 1);
   recalc(p);
   UI.syncRack();
   UI.toast("✦ " + def.name.toUpperCase());
@@ -2150,7 +2266,7 @@ function applyCard(c) {
     c.w.lvl++;
     if (c.w.lvl >= WEAPONS[c.w.id].max) g.runMaxed++;
   }
-  else if (c.kind === "wnew") { addWeapon(p, c.id); }
+  else if (c.kind === "wnew") { addWeapon(p, c.id); questProgress("weapon", c.id, 1); }
   else if (c.kind === "abup") { p.abLvl++; UI.syncSkill(); }
   else if (c.kind === "pup" || c.kind === "pnew") { p.passives[c.id] = (p.passives[c.id] || 0) + 1; }
   else if (c.kind === "heal") { p.hp = Math.min(p.maxHp, p.hp + 40); }
@@ -2188,6 +2304,97 @@ function hurtPlayer(dmg) {
   }
 }
 
+
+/* ---------- задания на забег ------------------------------------------
+   Три штуки на старте, висят до конца. Берём только то, что уже открыто,
+   иначе выпадет задание на недоступное оружие.                          */
+function enemyIcon(def, color) {
+  const n = def.shape || 6, pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * TAU / n;
+    pts.push((12 + Math.cos(a) * 8).toFixed(1) + "," + (12 + Math.sin(a) * 8).toFixed(1));
+  }
+  return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="' + color +
+    '" stroke-width="1.8" stroke-linejoin="round"><polygon points="' + pts.join(" ") + '"/></svg>';
+}
+
+function makeQuests() {
+  const p = g.p, pool = [];
+  for (let i = 0; i < ENEMIES.length; i++) {
+    const def = ENEMIES[i];
+    if (def.from > RUN_LEN * 0.6) continue;          // кого не успеешь встретить — не предлагаем
+    pool.push({
+      kind: "kill", key: def.id, name: def.name, color: def.color, icon: enemyIcon(def, def.color),
+      goal: pick(QUEST_KILL_GOALS), reward: QUEST_REWARD.kill, label: "Убей"
+    });
+  }
+  for (const id in WEAPONS) {
+    const def = WEAPONS[id];
+    if (def.evolved || !isUnlocked("w:" + id)) continue;
+    if (p.weapons.some(w => w.base === id)) continue;
+    pool.push({
+      kind: "weapon", key: id, name: def.name, color: def.color, icon: svg(ICONS[def.ico], def.color),
+      goal: 1, reward: QUEST_REWARD.weapon, label: "Возьми"
+    });
+  }
+  for (const id in WEAPONS) {
+    const def = WEAPONS[id];
+    if (def.evolved || !def.evoTo) continue;
+    if (!isUnlocked("w:" + id) || !isUnlocked("p:" + def.evoNeed)) continue;
+    const evo = WEAPONS[def.evoTo];
+    pool.push({
+      kind: "evolve", key: id, name: evo.name, color: "#ffc23d", icon: svg(ICONS[evo.ico], "#ffc23d"),
+      goal: 1, reward: QUEST_REWARD.evolve, label: "Собери"
+    });
+  }
+  shuffle(pool);
+  /* по одному каждого вида, остальное добираем чем есть */
+  const out = [];
+  ["kill", "weapon", "evolve"].forEach(k => {
+    const q = pool.find(x => x.kind === k && out.indexOf(x) < 0);
+    if (q) out.push(q);
+  });
+  for (let i = 0; i < pool.length && out.length < 3; i++)
+    if (out.indexOf(pool[i]) < 0) out.push(pool[i]);
+  const list = out.slice(0, 3);
+  list.forEach(q => { q.have = 0; q.done = false; });
+  return list;
+}
+
+function questProgress(kind, key, amount) {
+  for (let i = 0; i < g.quests.length; i++) {
+    const q = g.quests[i];
+    if (q.done || q.kind !== kind || q.key !== key) continue;
+    q.have += amount || 1;
+    if (q.have >= q.goal) {
+      q.have = q.goal;
+      q.done = true;
+      g.questBonus += q.reward;
+      g.gold += q.reward;
+      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ◈");
+      Sfx.ultReady();
+    }
+  }
+}
+
+/* ---------- изгнание карты --------------------------------------------- */
+function cardKey(c) {
+  if (c.kind === "wup" || c.kind === "wnew") return "w:" + (c.w ? c.w.base : c.id);
+  if (c.kind === "pup" || c.kind === "pnew") return "p:" + c.id;
+  if (c.kind === "abup") return "ab";
+  return null;
+}
+function canBanish(c) { return g.banishes > 0 && cardKey(c) !== null; }
+function banishCard(c) {
+  const key = cardKey(c);
+  if (!key || g.banishes <= 0) return;
+  g.banishes--;
+  g.banished.push(key);
+  Sfx.empty();
+  UI.toast("ИЗГНАНО: " + c.def.name.toUpperCase());
+  UI.showCards(buildCards());
+}
+
 /* ---------- открытия --------------------------------------------------
    Считаем от накопленной статистики плюс текущий забег: открытие прилетает
    сразу в бою. В endRun забег сперва вливается в totals, а счётчики
@@ -2210,7 +2417,7 @@ function checkUnlocks() {
   let opened = 0;
   for (let i = 0; i < UNLOCKS.length; i++) {
     const u = UNLOCKS[i];
-    if (isUnlocked(u.id) || !u.need(s)) continue;
+    if (isUnlocked(u.id) || u.cur(s) < u.goal) continue;
     save.unlocked.push(u.id);
     opened++;
     UI.toast("★ ОТКРЫТО: " + u.name.toUpperCase());
@@ -2243,7 +2450,7 @@ function endRun(won) {
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
-    bonus: g.bonus, mins: mins, total: total, greed: p.greedMul
+    bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul
   });
 }
 
@@ -2611,13 +2818,16 @@ function update(dt) {
         else if (d.type === "magnet") { pullEverything(); Sfx.evo(); UI.toast("МАГНИТ"); }
         else if (d.type === "heal") { p.hp = Math.min(p.maxHp, p.hp + d.v); Sfx.pick(); UI.toast("+" + d.v + " HP"); }
         else if (d.type === "chest") {
-          g.gold += 12;
+          const golden = !!d.gold;
+          g.gold += golden ? 30 : 12;
           g.runChests++;
-          /* сундук сперва пытается эволюционировать оружие, и только если
-             эволюционировать нечего — даёт обычный бесплатный апгрейд */
-          if (!tryEvolve()) {
-            g.pendingUps++;
-            UI.toast("СУНДУК");
+          /* сундук сперва пытается эволюционировать оружие; золотой сверх
+             того сыплет апгрейдами, обычный — ровно одним */
+          const evolved = tryEvolve();
+          const ups = golden ? (evolved ? 2 : 3) : (evolved ? 0 : 1);
+          if (ups > 0) {
+            g.pendingUps += ups;
+            UI.toast(golden ? "★ ЗОЛОТОЙ СУНДУК" : "СУНДУК");
             if (g.state === "play") openLevelUp();
           }
         }
@@ -3209,14 +3419,18 @@ const UI = {
     $("rack").classList.add("on");
     $("dash").classList.add("on");
     $("skill").classList.add("on");
+    $("quests").classList.add("on");
     this.syncSkill();
     this.syncRack();
+    this.buildQuests();
   },
   leavePlay() {
     $("hud").classList.remove("on");
     $("rack").classList.remove("on");
     $("dash").classList.remove("on");
     $("skill").classList.remove("on");
+    $("quests").classList.remove("on");
+    $("questIntro").classList.remove("on");
     $("bossBar").classList.remove("on");
   },
 
@@ -3275,6 +3489,7 @@ const UI = {
     $("skill").classList.toggle("ready", ready);
     $("skillKey").classList.toggle("rdy", p.abCharge >= 1);
     $("skillKey").textContent = p.abCharge >= 1 ? "ЛКМ" : (abCdSec(p) * (1 - p.abCharge)).toFixed(1);
+    this.syncQuests();
   },
 
   /* стойка всегда показывает все слоты: занятые и пустые под рамкой */
@@ -3286,7 +3501,8 @@ const UI = {
       const w = p.weapons[i];
       if (!w) { hw += '<div class="slot empty"></div>'; continue; }
       const def = WEAPONS[w.id];
-      hw += '<div class="slot' + (def.evolved ? " evo" : "") + '">' +
+      const ready = def.evoTo && w.lvl >= def.max && (p.passives[def.evoNeed] || 0) >= 4;
+      hw += '<div class="slot' + (def.evolved ? " evo" : "") + (ready ? " evoready" : "") + '">' +
         svg(ICONS[def.ico], def.color) +
         '<span class="nm">' + def.name + "</span>" +
         (def.evolved ? '<span class="pips"><i class="f"></i><i class="f"></i><i class="f"></i></span>'
@@ -3305,6 +3521,66 @@ const UI = {
     }
     $("rackW").innerHTML = hw;
     $("rackP").innerHTML = hp;
+  },
+
+  showPause() {
+    const p = g.p;
+    $("questPause").innerHTML = g.quests.length
+      ? g.quests.map(q => this.questRow(q)).join("") : "";
+    if (p) {
+      const pct = v => Math.round(v * 100) + "%";
+      const rows = [
+        ["Урон", "×" + p.dmgMul.toFixed(2)],
+        ["Откат", "−" + Math.round((1 - p.cdMul) * 100) + "%"],
+        ["Площадь", "×" + p.areaMul.toFixed(2)],
+        ["Длительность", "×" + p.durMul.toFixed(2)],
+        ["Скорость", Math.round(p.speed) + " px/с"],
+        ["Броня", "−" + p.armor.toFixed(0)],
+        ["Регенерация", p.regen.toFixed(1) + "/с"],
+        ["Радиус сбора", Math.round(p.pickR) + " px"],
+        ["Добыча", "×" + p.greedMul.toFixed(2)],
+        ["Опыт", "×" + p.xpMul.toFixed(2)],
+        ["Снарядов", "+" + p.countBonus],
+        ["Удача", "+" + pct(p.luck)]
+      ];
+      $("pauseStats").innerHTML = rows.map(r => "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
+    } else $("pauseStats").innerHTML = "";
+    this.show("pause");
+  },
+
+  /* ---- задания забега ---- */
+  questRow(q, cls) {
+    const pct = Math.round(q.have / q.goal * 100);
+    return '<div class="qrow' + (q.done ? " done" : "") + (cls || "") + '" style="border-left-color:' + q.color + '">' +
+      q.icon +
+      '<span class="qt"><span class="qn">' + q.label + " " + q.name + "</span>" +
+      '<span class="qbar"><i style="width:' + pct + '%;background:' + q.color + '"></i></span></span>' +
+      '<span class="qv">' + (q.done ? "✔" : q.have + "/" + q.goal) + "</span></div>";
+  },
+  buildQuests() {
+    if (!g.quests.length) { $("quests").innerHTML = ""; return; }
+    this._qcache = g.quests.map(q => q.have + "/" + q.done);
+    $("quests").innerHTML = g.quests.map(q => this.questRow(q)).join("");
+  },
+  syncQuests() {
+    if (!g.quests.length) return;
+    const now = g.quests.map(q => q.have + "/" + q.done);
+    if (this._qcache && now.join("|") === this._qcache.join("|")) return;  // без нужды DOM не трогаем
+    this.buildQuests();
+  },
+  showQuestIntro() {
+    if (!g.quests.length) return;
+    $("questIntroRow").innerHTML = g.quests.map(q =>
+      '<div class="qi-card" style="border-left-color:' + q.color + '">' + q.icon +
+      '<span class="qi-t"><span class="qi-l">' + q.label + "</span>" +
+      '<span class="qi-n">' + q.name + (q.kind === "kill" ? " ×" + q.goal : "") + "</span>" +
+      '<span class="qi-r">+' + q.reward + " ◈</span></span></div>").join("");
+    const el = $("questIntro");
+    el.classList.remove("on");
+    void el.offsetWidth;                       // перезапуск анимации
+    el.classList.add("on");
+    clearTimeout(this._qiT);
+    this._qiT = setTimeout(() => el.classList.remove("on"), 3400);
   },
 
   syncSkill() {
@@ -3361,8 +3637,13 @@ const UI = {
     cards.forEach((c, i) => {
       const def = c.def;
       const el = document.createElement("button");
+      /* рамка по редкости: чем реже предмет, тем заметнее */
+      const rw = c.kind === "wup" || c.kind === "wnew" ? RARITY.w[c.w ? c.w.base : c.id]
+        : c.kind === "pup" || c.kind === "pnew" ? RARITY.p[c.id] : null;
+      const tier = rw == null ? "" : rw >= 90 ? " rare-1" : rw >= 60 ? " rare-2" : " rare-3";
       el.className = "card" + (c.kind === "wnew" || c.kind === "pnew" ? " new" : "") +
-        (c.kind === "pup" || c.kind === "pnew" ? " pas" : "");
+        (c.kind === "pup" || c.kind === "pnew" ? " pas" : "") + tier +
+        (canBanish(c) ? " canban" : "");
       const kind = c.kind === "wnew" ? "Новое оружие"
           : c.kind === "wup" ? "Оружие · ур. " + (c.w.lvl + 1)
             : c.kind === "abup" ? "Способность · ур. " + (c.lvl + 1)
@@ -3380,10 +3661,17 @@ const UI = {
         '<div class="top">' + svg(ICONS[def.ico], def.color) +
         '<div><div class="kind">' + kind + '</div><div class="nm">' + def.name + "</div></div></div>" +
         '<div class="desc">' + desc + "</div>" +
-        '<div class="foot">' + foot + '<span class="key">' + (i + 1) + "</span></div>";
-      el.addEventListener("click", () => takeCard(c));
+        '<div class="foot">' + foot + '<span class="key">' + (i + 1) + "</span></div>" +
+        (canBanish(c) ? '<span class="ban" title="Изгнать до конца забега">✕</span>' : "");
+      el.addEventListener("click", ev => {
+        if (ev.target.classList.contains("ban")) { ev.stopPropagation(); banishCard(c); return; }
+        takeCard(c);
+      });
       row.appendChild(el);
     });
+    const bh = $("banishHint");
+    bh.classList.toggle("on", g.banishes > 0 && !spares);
+    $("banishLeft").textContent = g.banishes;
     const rr = $("rerollBtn");
     rr.classList.toggle("on", g.rerolls > 0 && !spares);
     $("rerollLeft").textContent = g.rerolls;
@@ -3402,6 +3690,7 @@ const UI = {
       ["Уровень", s.level],
       ["Собрано осколков", s.gold],
       ["Премия за боссов", s.bonus],
+      ["Премия за задания", s.quests],
       ["Множитель добычи", "×" + s.greed.toFixed(2)]
     ];
     if (won) rows.push(["Бонус за победу", "×1.50"]);
@@ -3490,9 +3779,12 @@ const UI = {
   },
 
   buildCollection() {
-    const needOf = id => {
-      const u = UNLOCKS.find(x => x.id === id);
-      return u ? u.text : "доступно сразу";
+    const st = unlockStats();
+    const unlockOf = id => UNLOCKS.find(x => x.id === id);
+    const needOf = id => { const u = unlockOf(id); return u ? u.text : "доступно сразу"; };
+    const progOf = id => {
+      const u = unlockOf(id);
+      return u ? unlockProgress(u, st).text : "";
     };
     const item = (id, def, sub, extra) => {
       const open = isUnlocked(id);
@@ -3500,7 +3792,7 @@ const UI = {
         svg(ICONS[def.ico], open ? def.color : "#4a5570") +
         '<span class="tx"><span class="nm">' + def.name + "</span>" +
         '<span class="sub">' + (open ? sub : needOf(id)) + "</span></span>" +
-        '<span class="mark">' + (open ? "✓" : "🔒") + "</span></div>";
+        '<span class="mark">' + (open ? "✓" : '<span class="prog">' + progOf(id) + "</span>") + "</span></div>";
     };
 
     let total = 0, got = 0, h = "";
@@ -3654,7 +3946,7 @@ function hotkeys() {
       else if (esc) UI.show("menu");
       break;
     case "play":
-      if (esc) { g.state = "pause"; UI.show("pause"); }
+      if (esc) { g.state = "pause"; UI.showPause(); }
       break;
     case "pause":
       if (esc || ent) { g.state = "play"; UI.hideAll(); clearPressed(); }
@@ -3686,7 +3978,7 @@ function frame(t) {
 
 /* авто-пауза при уходе со вкладки */
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && g.state === "play") { g.state = "pause"; UI.show("pause"); }
+  if (document.hidden && g.state === "play") { g.state = "pause"; UI.showPause(); }
 });
 
 /* ---------- старт ------------------------------------------------------ */
