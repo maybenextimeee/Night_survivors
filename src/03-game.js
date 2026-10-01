@@ -47,7 +47,7 @@ const g = {
   /* арена забега: свой набор врагов, боссов и палитра пола */
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
-  endless: false, hyper: false, cycle: 0,
+  endless: false, hyper: false, cycle: 0, adRevived: false,
   runQuests: 0, firstHit: -1, achT: 0, runAch: []
 };
 const scratch = [];
@@ -179,7 +179,7 @@ function startRun() {
   g.banishes = metaLvl("banish"); g.banished.length = 0;
   g.questBonus = 0;
   g.runQuests = 0; g.firstHit = -1; g.achT = 0; g.runAch.length = 0;
-  g.endless = false; g.hyper = false; g.cycle = 0;
+  g.endless = false; g.hyper = false; g.cycle = 0; g.adRevived = false;
   setArena(save.arena);
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
@@ -281,7 +281,7 @@ function killEnemy(e) {
     for (let i = 0; i < 22; i++) dropGem(e.x + rnd(-70, 70), e.y + rnd(-70, 70), Math.ceil(e.def.xp / 22));
     for (let i = 0; i < 6; i++) g.drops.push({ x: e.x + rnd(-60, 60), y: e.y + rnd(-60, 60), r: 9, type: "gold", v: 10 });
     g.drops.push({ x: e.x, y: e.y, r: 14, type: "chest" });
-    UI.toast("★ " + e.def.name + " ПОВЕРЖЕН");
+    UI.toast(t("★ {0} ПОВЕРЖЕН", e.def.name));
     if (e.def.reaper) { save.reaperKill = true; writeSave(); }
     if (e.def.finalBoss) {
       /* игра пройдена — но забег не обрывается: дальше идут круги */
@@ -289,8 +289,8 @@ function killEnemy(e) {
       writeSave();
       g.endless = true;
       g.shake = 40;
-      UI.toast("★ ПЕРВОИСТОЧНИК УНИЧТОЖЕН");
-      UI.toast("НОЧЬ ПРОДОЛЖАЕТСЯ");
+      UI.toast(t("★ ПЕРВОИСТОЧНИК УНИЧТОЖЕН"));
+      UI.toast(t("НОЧЬ ПРОДОЛЖАЕТСЯ"));
       Sfx.win();
     }
     checkAch();
@@ -577,8 +577,8 @@ function difficulty() {
      а враги приходят крепче предыдущего круга */
   const cHp = Math.pow(CYCLE_HP, g.cycle), cDmg = Math.pow(CYCLE_DMG, g.cycle);
   return {
-    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am * cHp * (H ? H.hp : 1),
-    dmg: (1 + m * 0.32) * curseMul * amDmg * cDmg * (H ? H.dmg : 1),
+    hp: (1 + m * 0.95 + m * m * 0.32) * curseMul * am * cHp * (H ? H.hp : 1) * REMOTE.enemyHpMul,
+    dmg: (1 + m * 0.32) * curseMul * amDmg * cDmg * (H ? H.dmg : 1) * REMOTE.enemyDmgMul,
     spd: (1 + Math.min(0.45, m * 0.048)) * (H ? H.spd : 1),
     rate: Math.min(H ? 24 : 18, 2.6 + m * 1.6) * (H ? H.rate : 1)
   };
@@ -680,7 +680,7 @@ function director(dt) {
         g.waveIdx++;
         const n = Math.min(120, 30 + Math.floor(g.time / 60) * 3);
         g.warn = { a: rnd(TAU), t: WAVE_WARN, n: n };
-        UI.toast("⚠ БОЛЬШАЯ ВОЛНА");
+        UI.toast(t("⚠ БОЛЬШАЯ ВОЛНА"));
         Sfx.blip(140, 0.5, "square", 0.12, -40);
       }
     }
@@ -692,7 +692,7 @@ function director(dt) {
     g.won = true;
     if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
     writeSave();
-    UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+    UI.toast(t("★ ТЫ ДОЖИЛ ДО РАССВЕТА"));
     checkAch();
   }
 
@@ -701,7 +701,7 @@ function director(dt) {
   if (g.time >= CHEST_FIRST) {
     g.chestT -= dt;
     if (g.chestT <= 0) {
-      g.chestT = g.time >= CHEST_RUSH ? CHEST_FAST : CHEST_EVERY;
+      g.chestT = g.time >= CHEST_RUSH ? CHEST_FAST : REMOTE.chestEvery;
       const pos = spawnRing();
       const e = spawnEnemy(unlockedPick(), pos.x, pos.y, true);
       if (e) {
@@ -720,7 +720,7 @@ function director(dt) {
     g.cycle++;
     g.bossIdx = 0;
     g.waveT = Math.min(g.waveT, 10);
-    UI.toast("◈ КРУГ " + (g.cycle + 1) + " · ВРАГИ КРЕПЧЕ");
+    UI.toast(t("◈ КРУГ {0} · ВРАГИ КРЕПЧЕ", g.cycle + 1));
     Sfx.cycle();
     g.shake = Math.max(g.shake, 24);
   }
@@ -736,7 +736,7 @@ function director(dt) {
         g.won = true;
         if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
         writeSave();
-        UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+        UI.toast(t("★ ТЫ ДОЖИЛ ДО РАССВЕТА"));
       }
       spawnBoss(def);
       return;
@@ -752,7 +752,7 @@ function director(dt) {
       }
       g.ebullets.length = 0;
       g.boss = null;
-      UI.toast("★ ТЫ ДОЖИЛ ДО РАССВЕТА");
+      UI.toast(t("★ ТЫ ДОЖИЛ ДО РАССВЕТА"));
       spawnBoss(def);
       return;
     }
@@ -775,7 +775,7 @@ function director(dt) {
 /* ---------- опыт и уровни --------------------------------------------- */
 function gainXp(v) {
   const p = g.p;
-  p.xp += v * p.greedMul * p.xpMul;
+  p.xp += v * p.greedMul * p.xpMul * REMOTE.xpMul;
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext;
     p.level++;
@@ -843,8 +843,8 @@ function buildCards() {
 
 function spareCards() {
   return [
-    { kind: "heal", def: { name: "Ремкомплект", ico: "heal", color: "#ff2f6e", text: "Восстановить 40 здоровья." } },
-    { kind: "gold", def: { name: "Осколки", ico: "gold", color: "#ffc23d", text: "+25 осколков к добыче." } }
+    { kind: "heal", def: { name: t("Ремкомплект"), ico: "heal", color: "#ff2f6e", text: t("Восстановить 40 здоровья.") } },
+    { kind: "gold", def: { name: t("Осколки"), ico: "gold", color: "#ffc23d", text: t("+25 осколков к добыче.") } }
   ];
 }
 const onlySpares = cards => cards.length === 2 && cards.every(c => c.kind === "heal" || c.kind === "gold");
@@ -943,16 +943,41 @@ function hurtPlayer(dmg) {
       p.revive--;
       p.hp = p.maxHp * 0.5;
       p.inv = 2.5;
-      UI.toast("РЕЗЕРВНАЯ КОПИЯ");
+      UI.toast(t("РЕЗЕРВНАЯ КОПИЯ"));
       Sfx.win();
       /* расчистить экран, чтобы не убили мгновенно */
       hitArea(g, p.x, p.y, 300, 999, 400, null, 0, "#fff");
       g.ebullets.length = 0;
+    } else if (canAdRevive()) {
+      /* последний шанс: экран с предложением посмотреть рекламу */
+      p.hp = 0;
+      g.state = "revive";
+      UI.showRevive();
     } else {
       p.hp = 0;
       endRun(g.won);        // ночь уже пережита — Жнец не отбирает победу
     }
   }
+}
+/* Воскрешение за рекламу — раз за забег, только на Яндексе. От Жнеца не
+   спасает: он и так приходит, когда забег уже засчитан. */
+function canAdRevive() {
+  return Platform.yandex && REMOTE.adRevive && !g.adRevived && !g.reaper;
+}
+function adRevive() {
+  const p = g.p;
+  g.adRevived = true;
+  p.hp = p.maxHp * REMOTE.reviveHp;
+  p.inv = 3;
+  hitArea(g, p.x, p.y, 320, 999, 420, null, 0, "#ffc23d");
+  g.ebullets.length = 0;
+  g.shake = 20;
+  burst(p.x, p.y, "#ffc23d", 40, 4.5);
+  Sfx.win();
+  UI.toast(t("ВОСКРЕШЕНИЕ"));
+  g.state = "play";
+  UI.hideAll();
+  clearPressed();
 }
 
 
@@ -977,7 +1002,7 @@ function makeQuests() {
     if (def.from > RUN_LEN * 0.6) continue;          // кого не успеешь встретить — не предлагаем
     pool.push({
       kind: "kill", key: def.id, name: def.name, color: def.color, icon: enemyIcon(def, def.color),
-      goal: pick(QUEST_KILL_GOALS), reward: QUEST_REWARD.kill, label: "Убей"
+      goal: pick(QUEST_KILL_GOALS), reward: QUEST_REWARD.kill, label: t("Убей")
     });
   }
   for (const id in WEAPONS) {
@@ -986,7 +1011,7 @@ function makeQuests() {
     if (p.weapons.some(w => w.base === id)) continue;
     pool.push({
       kind: "weapon", key: id, name: def.name, color: def.color, icon: svg(ICONS[def.ico], def.color),
-      goal: 1, reward: QUEST_REWARD.weapon, label: "Возьми"
+      goal: 1, reward: QUEST_REWARD.weapon, label: t("Возьми")
     });
   }
   for (const id in WEAPONS) {
@@ -996,7 +1021,7 @@ function makeQuests() {
     const evo = WEAPONS[def.evoTo];
     pool.push({
       kind: "evolve", key: id, name: evo.name, color: "#ffc23d", icon: svg(ICONS[evo.ico], "#ffc23d"),
-      goal: 1, reward: QUEST_REWARD.evolve, label: "Собери"
+      goal: 1, reward: QUEST_REWARD.evolve, label: t("Собери")
     });
   }
   shuffle(pool);
@@ -1025,7 +1050,7 @@ function questProgress(kind, key, amount) {
       g.runQuests++;
       g.questBonus += q.reward;
       g.gold += q.reward;
-      UI.toast("✔ ЗАДАНИЕ · +" + q.reward + " ОСКОЛКОВ");
+      UI.toast(t("✔ ЗАДАНИЕ · +{0} ОСКОЛКОВ", q.reward));
       Sfx.ultReady();
       if (UI.flashQuest) UI.flashQuest();
     }
@@ -1046,7 +1071,7 @@ function banishCard(c) {
   g.banishes--;
   g.banished.push(key);
   Sfx.empty();
-  UI.toast("ИЗГНАНО: " + c.def.name.toUpperCase());
+  UI.toast(t("ИЗГНАНО: {0}", c.def.name.toUpperCase()));
   UI.showCards(buildCards());
 }
 
@@ -1075,7 +1100,7 @@ function checkUnlocks() {
     if (isUnlocked(u.id) || u.cur(s) < u.goal) continue;
     save.unlocked.push(u.id);
     opened++;
-    UI.toast("★ ОТКРЫТО: " + u.name.toUpperCase());
+    UI.toast(t("★ ОТКРЫТО: {0}", u.name.toUpperCase()));
     Sfx.evo();
   }
   if (opened) writeSave();
@@ -1139,7 +1164,7 @@ function endRun(won) {
   const p = g.p;
   const mins = g.time / 60;
   const base = g.gold + Math.floor(g.kills * 0.35) + Math.floor(mins * 12) + p.level * 3 + g.bonus;
-  const total = Math.max(1, Math.round(base * p.greedMul * modGreed() * (won ? 1.5 : 1)));
+  const total = Math.max(1, Math.round(base * p.greedMul * modGreed() * REMOTE.shardMul * (won ? 1.5 : 1)));
   save.shards += total;
   if (g.time > save.best) save.best = g.time;
   if (g.kills > save.bestKills) save.bestKills = g.kills;
@@ -1151,6 +1176,9 @@ function endRun(won) {
   t.bosses += g.runBosses; t.maxed += g.runMaxed; t.quests += g.runQuests;
   t.earned += total;
   g.runProps = g.runChests = g.runBosses = g.runMaxed = g.runQuests = 0;
+  /* бесконечность: рекорд в личный список и, если вошёл, — в таблицу Яндекса */
+  let rec = null;
+  if (g.endless && g.arenaDef) rec = Platform.submitEndless(g.arenaDef.id, g.time);
   /* закрытая арена открывает следующую; заодно помним, под каким проклятием */
   if (won && g.arenaDef) {
     if (save.arenaDone.indexOf(g.arenaDef.id) < 0) save.arenaDone.push(g.arenaDef.id);
@@ -1159,11 +1187,13 @@ function endRun(won) {
   writeSave();
   checkUnlocks();
   checkAch();
+  Platform.pushCloud(true);            // конец забега — пишем в облако сразу
   if (won) Sfx.win(); else Sfx.die();
   UI.showEnd(won, {
     time: g.time, kills: g.kills, level: p.level, gold: g.gold,
     bonus: g.bonus, quests: g.questBonus, mins: mins, total: total, greed: p.greedMul,
-    cycle: g.cycle, mods: modGreed(), crits: g.crits, ach: g.runAch.slice()
+    cycle: g.cycle, mods: modGreed(), crits: g.crits, ach: g.runAch.slice(),
+    endless: g.endless, rec: rec
   });
 }
 
@@ -1218,17 +1248,20 @@ function update(dt) {
   const ab = ABILITIES[p.ability];
   const cdSec = abCdSec(p);
   if (p.abCharge < AB_CHARGES) p.abCharge = Math.min(AB_CHARGES, p.abCharge + dt / cdSec);
-  const wx = g.cam.x - VW / 2 + mouse.x, wy = g.cam.y - VH / 2 + mouse.y;
+  /* прицел: курсор мыши, а без мыши — ближайший враг (см. 07-touch.js) */
+  let wx, wy;
+  if (Touch.on) { const a = touchAim(p); wx = a.x; wy = a.y; }
+  else { wx = g.cam.x - VW / 2 + mouse.x; wy = g.cam.y - VH / 2 + mouse.y; }
   /* пауза между кастами: иначе три заряда уходят в один кадр, и вместо
      быстрой очереди получается один невидимый залп */
   if (p.abGap > 0) p.abGap -= dt;
   if (p.abGap > 0) { /* ждём */ }
   /* ПКМ тратит все три заряда на усиленную версию навыка */
-  else if (p.abCharge >= AB_CHARGES && (mouse.right || tookKey("e") || tookKey("у"))) {
+  else if (p.abCharge >= AB_CHARGES && (mouse.right || tookKey("e"))) {
     p.abCharge = 0;
     p.abRefund = 0;                          // ульта зарядом не возвращается
     p.abGap = AB_GAP;
-    setSrc("ab:" + p.ability + ":ult", ab.name + " · ульта");
+    setSrc("ab:" + p.ability + ":ult", t("{0} · ульта", ab.name));
     /* прибавка за уровень подмешивается в общий множитель урона на время
        каста: так её подхватывают и колодцы, которые забирают dmgMul при
        рождении и живут дальше сами по себе */
@@ -1238,14 +1271,14 @@ function update(dt) {
     p.dmgMul = baseDmg;
     setSrc(null, "");
     UI.toast("✦ " + ab.ult.short);
-  } else if (p.abCharge >= 1 && (mouse.down || keys.q || keys["й"])) {
+  } else if (p.abCharge >= 1 && (mouse.down || keys.q)) {
     p.abCharge -= 1;
     p.abRefund = REFUND_SHARE;               // бюджет возврата в долях заряда
     p.abGap = AB_GAP;
     setSrc("ab:" + p.ability, ab.name);
     ab.cast(g, wx, wy, p.abLvl);
     setSrc(null, "");
-  } else if (p.abCharge < 1 && (mouse.down || keys.q || keys["й"]) && p.dimCd <= 0) {
+  } else if (p.abCharge < 1 && (mouse.down || keys.q) && p.dimCd <= 0) {
     /* жмёшь, а зарядов нет — иконка тускнеет, чтобы было понятно почему */
     p.dimT = DIM_TIME;
     p.dimCd = DIM_GAP;
@@ -1538,7 +1571,7 @@ function update(dt) {
       if (l < 24) {
         d.dead = true;
         if (d.type === "gold") { g.gold += d.v; Sfx.coin(); }
-        else if (d.type === "magnet") { pullEverything(); Sfx.evo(); UI.toast("МАГНИТ"); }
+        else if (d.type === "magnet") { pullEverything(); Sfx.evo(); UI.toast(t("МАГНИТ")); }
         else if (d.type === "heal") { p.hp = Math.min(p.maxHp, p.hp + d.v); Sfx.pick(); UI.toast("+" + d.v + " HP"); }
         else if (d.type === "chest") {
           const golden = !!d.gold;
@@ -1550,7 +1583,7 @@ function update(dt) {
           const ups = golden ? (evolved ? 2 : 3) : (evolved ? 0 : 1);
           if (ups > 0) {
             g.pendingUps += ups;
-            UI.toast(golden ? "★ ЗОЛОТОЙ СУНДУК" : "СУНДУК");
+            UI.toast(golden ? t("★ ЗОЛОТОЙ СУНДУК") : t("СУНДУК"));
             if (g.state === "play") openLevelUp();
           }
         }

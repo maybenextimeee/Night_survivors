@@ -24,6 +24,9 @@ body{
   margin:0;background:var(--ground);color:var(--ink);
   font-family:var(--body);overflow:hidden;
   -webkit-font-smoothing:antialiased;
+  /* игра, а не документ: выделение текста и «резинка» прокрутки не нужны */
+  user-select:none;-webkit-user-select:none;overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent;
 }
 #cv{position:fixed;inset:0;width:100%;height:100%;display:block;background:var(--ground);cursor:crosshair}
 #vignette{position:fixed;inset:0;pointer-events:none;z-index:2;
@@ -611,7 +614,9 @@ h2 .shards{font-size:15px}
 .darenas div.done .as{color:var(--lime)}
 .darenas div.lock{opacity:.45}
 .darenas .mk{font-size:10px;color:var(--ac);letter-spacing:1px}
-@media (max-width:860px){
+/* одна колонка — только на узком и при этом высоком экране; телефону
+   в альбомной ориентации нужны обе колонки, иначе меню уезжает вниз */
+@media (max-width:860px) and (min-height:501px){
   .menupanel{grid-template-columns:1fr;gap:24px}
   .dossier{border-left:none;border-top:1px solid var(--line);padding-left:0;padding-top:20px}
 }
@@ -637,6 +642,212 @@ h2 .shards{font-size:15px}
 .endach .ea .n{font-family:var(--display);font-size:12.5px;letter-spacing:.8px;text-transform:uppercase}
 .endach .ea .r{font-family:var(--mono);font-size:8.5px;letter-spacing:2px;text-transform:uppercase;
   color:var(--rar,#8fa3c8)}
+
+/* --- профиль Яндекса в досье --- */
+.profile{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-bottom:18px;
+  background:#0c1220;border:1px solid var(--line)}
+.profile[hidden]{display:none}
+.profile .pava{width:34px;height:34px;flex:none;display:grid;place-items:center;overflow:hidden;
+  background:#16203a;border:1px solid var(--line);font-family:var(--display);font-size:15px;color:var(--cyan)}
+.profile .pava img{width:100%;height:100%;object-fit:cover;display:block}
+.profile .ptx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.profile .ptx b{font-family:var(--display);font-size:14px;letter-spacing:.8px;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile .ptx span{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.35}
+.profile .plogin{padding:8px 13px;font-size:12px;flex:none;border-color:var(--cyan);color:var(--cyan)}
+.profile .plogin[hidden]{display:none}
+.profile.on{border-color:#2f6f7d}
+
+/* --- таблица рекордов бесконечности --- */
+.lbpanel{margin-top:14px;border:1px solid var(--line);background:linear-gradient(170deg,#0f1628,#0a0f1c);
+  animation:lbIn .3s ease}
+.lbpanel[hidden]{display:none}
+@keyframes lbIn{from{opacity:0;transform:translateY(8px)}}
+.lbhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 14px;
+  border-bottom:1px solid var(--line)}
+.lbhead .lbt{font-family:var(--display);font-size:14px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);flex:1}
+.lbtabs{display:flex;gap:5px;flex-wrap:wrap}
+.lbtabs button{padding:5px 11px;font-size:10.5px;font-family:var(--mono);letter-spacing:1px;
+  background:#0b1020;color:var(--muted)}
+.lbtabs button.on{color:var(--ac,#3ee8ff);border-color:var(--ac,#3ee8ff);background:#12203a}
+.lbbody{padding:6px 8px;min-height:64px;max-height:min(300px,34vh);overflow-y:auto}
+.lbrow{display:grid;grid-template-columns:42px 26px 1fr auto;align-items:center;gap:10px;
+  padding:6px 8px;font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.lbrow+.lbrow{border-top:1px solid rgba(38,48,74,.5)}
+.lbrow .rk{color:var(--muted);letter-spacing:.5px}
+.lbrow.r1 .rk{color:var(--gold)}
+.lbrow.r2 .rk{color:#cfd8ea}
+.lbrow.r3 .rk{color:#d08a4c}
+.lbrow .av{width:24px;height:24px;background:#16203a;overflow:hidden;display:grid;place-items:center;
+  font-family:var(--display);font-size:11px;color:var(--muted)}
+.lbrow .av img{width:100%;height:100%;object-fit:cover;display:block}
+.lbrow .nm{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--body)}
+.lbrow .sc{color:var(--ink);font-weight:600;letter-spacing:.5px}
+.lbrow.me{background:rgba(62,232,255,.07);box-shadow:inset 3px 0 0 var(--cyan)}
+.lbrow.me .nm{color:var(--cyan)}
+.lbgap{text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;padding:2px 0;opacity:.6}
+.lbmsg{padding:14px 10px;font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.6;text-align:center}
+.lbfoot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;
+  border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.lbfoot b{color:var(--ink);font-weight:600}
+.lbfoot .sp{flex:1}
+.lbfoot button{padding:7px 13px;font-size:11.5px;border-color:var(--cyan);color:var(--cyan)}
+
+/* --- итоги: рекорд и награда за рекламу --- */
+.endrec{margin-top:14px;padding:10px 14px;border:1px solid #47391a;background:linear-gradient(140deg,#1a1508,#0d1220 70%);
+  font-family:var(--mono);font-size:12.5px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.endrec[hidden]{display:none}
+.endrec b{color:var(--gold);font-weight:600;font-size:14px}
+.endrec .new{font-family:var(--display);font-size:11px;letter-spacing:2px;color:#04121a;background:var(--gold);
+  padding:2px 8px}
+.reward{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:12px;
+  border-color:var(--gold);color:var(--gold);text-align:center}
+.reward[hidden]{display:none}
+.reward:hover:not(:disabled){border-color:#ffe08a;color:#ffe08a;box-shadow:0 0 22px -8px var(--gold)}
+.reward b{font-family:var(--mono);font-weight:600}
+.reward:disabled{opacity:.55}
+
+/* --- резиновый верх HUD ---
+   Три блока (часы слева, опыт по центру, здоровье справа) делят одну
+   ширину. Центральная рельса задаёт --xpw, а боковые не заходят за её край:
+   статистика при нехватке места переносится, полоса здоровья сужается.
+   Яндекс проверяет, что при любом размере окна ничего не накладывается
+   (пункт 1.10.3). */
+#hud{--xpw:min(460px,34vw)}
+.xprail{width:var(--xpw)}
+.topbar>div:first-child{max-width:calc(50vw - var(--xpw) / 2 - 34px);min-width:0}
+.stats{flex-wrap:wrap;row-gap:3px;column-gap:14px}
+.stats>span{white-space:nowrap}
+.timeline{width:min(300px,100%)}
+/* у пустой дорожки нет «естественной» ширины — задаём её блоку явно */
+.hpbox{width:min(320px,calc(50vw - var(--xpw) / 2 - 30px));min-width:0}
+.hpbox .track{width:auto;flex:1;min-width:60px}
+/* полоса босса — между панелью заданий слева и зеркальным отступом справа */
+.bossbar{width:min(560px,calc(100vw - 540px));min-width:200px}
+/* низкое окно: стойка оружия компактнее, иначе упирается в задания */
+@media (max-height:600px){
+  .slot{padding:2px 7px 2px 3px;min-width:118px}
+  .slot .ico{width:18px;height:18px}
+  .slot.empty{height:24px}
+  .rackcol{gap:4px}
+  .qrow{padding:3px 7px}
+}
+
+/* --- версия в правом нижнем углу --- */
+#ver{position:fixed;right:12px;bottom:8px;z-index:12;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:1px;color:var(--muted);opacity:.7;pointer-events:none}
+#ver[hidden]{display:none}
+/* --- объявление из удалённой конфигурации --- */
+.news{margin:0 0 14px;padding:9px 12px;border:1px solid #2f6f7d;border-left:3px solid var(--cyan);
+  background:rgba(62,232,255,.06);font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ink)}
+.news[hidden]{display:none}
+/* --- экран воскрешения --- */
+.revivepanel{width:min(620px,100%);border-color:#5a1c33}
+.revivepanel:before{background:linear-gradient(90deg,var(--magenta),rgba(255,47,110,0))}
+.revivepanel h2{color:var(--magenta)}
+#bRevive:disabled{opacity:.6}
+
+/* ================= сенсорный режим ================= */
+/* жесты браузера (зум, прокрутка) запрещаем только на поле боя и кнопках;
+   списки в меню должны листаться пальцем */
+html,body{touch-action:manipulation;-webkit-touch-callout:none}
+#cv,#touchUi,#hud{touch-action:none}
+.screen,.grid,.achgrid,.colgrid,.lbbody{touch-action:pan-y}
+#touchUi{display:none}
+.touch #touchUi{display:block}
+/* кнопки и джойстик живут только в бою */
+#touchUi .tbtn,#stick{display:none}
+.touch #hud.on ~ #touchUi .tbtn{display:flex}
+.touch #dash,.touch #skill{display:none!important}
+.touch .k,.touch .card .key,.touch .reroll .k,.touch .help-keys{display:none}
+
+.tbtn{position:fixed;z-index:6;align-items:center;justify-content:center;flex-direction:column;gap:4px;
+  padding:0;border-radius:50%;text-align:center;font-family:var(--display);letter-spacing:1.5px;
+  background:radial-gradient(circle at 50% 35%,rgba(30,42,70,.82),rgba(10,14,25,.82));
+  border:1px solid rgba(62,232,255,.45);color:var(--cyan);
+  box-shadow:0 0 18px -6px rgba(62,232,255,.6);user-select:none}
+.tbtn.down{transform:scale(.93);background:rgba(62,232,255,.22)}
+.tbtn.dim{opacity:.45}
+#tSkill{right:22px;bottom:22px;width:86px;height:86px;font-size:11px}
+#tSkill .tch{display:flex;gap:3px}
+#tSkill .tch i{display:block;width:14px;height:5px;background:#1a2237;position:relative;overflow:hidden}
+#tSkill .tch b{position:absolute;inset:0;background:var(--cyan);transform-origin:left;transform:scaleX(0)}
+#tDash{right:122px;bottom:16px;width:62px;height:62px;font-size:9.5px}
+#tDash em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ink)}
+#tUlt{right:30px;bottom:122px;width:68px;height:68px;font-size:10px;opacity:.35;
+  border-color:rgba(255,194,61,.5);color:var(--gold)}
+#tUlt.ready{opacity:1;background:radial-gradient(circle at 50% 35%,#ffd76a,#e39a12);color:#04121a;
+  border-color:#ffe08a;animation:ultglow 1.1s ease-in-out infinite}
+#tPause{right:14px;top:44px;width:40px;height:40px;border-radius:8px;font-size:13px}
+
+#stick{position:fixed;z-index:5;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;
+  border:1px solid rgba(62,232,255,.35);background:radial-gradient(circle,rgba(62,232,255,.08),rgba(62,232,255,.02));
+  pointer-events:none}
+#stick.on{display:block}
+#stick i{position:absolute;left:50%;top:50%;width:48px;height:48px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#7df1ff,#1c8fa6);box-shadow:0 0 18px rgba(62,232,255,.6)}
+
+/* на касаниях стойка — иконки в два ряда, без подписей: место нужно джойстику */
+.touch #rack{flex-direction:column;gap:4px;bottom:12px;left:12px}
+.touch .rackcol{flex-direction:row;gap:4px}
+.touch .slot{min-width:0;padding:3px}
+.touch .slot .nm,.touch .slot .pips,.touch .slot.empty{display:none}
+.touch #achPop{bottom:auto;top:92px;right:64px;width:250px}
+
+/* ================= низкий экран: телефон в альбомной ориентации =================
+   Всё главное должно помещаться без прокрутки (пункт 1.10.4). */
+@media (max-height:500px){
+  .screen{padding:10px}
+  .panel{padding:16px 18px}
+  h2{font-size:19px;margin-bottom:10px}
+  .menupanel .lede,.menupanel .eyebrow{display:none}
+  .menupanel{gap:18px;grid-template-columns:1.2fr .8fr}
+  .menupanel h1{font-size:28px;white-space:nowrap}
+  .menupanel h1 br{display:none}
+  .menupanel h1 em{margin-left:.25em}
+  .menupanel .menu{margin-top:12px;gap:5px}
+  .menu button{padding:7px 12px;font-size:12.5px}
+  .dossier{padding-left:16px;padding-top:30px}
+  .balance{padding:10px 12px}
+  .cur.big b{font-size:20px}
+  .langsw{top:8px;right:10px}
+  .darenas,.dossier>.eyebrow,.dossier .hint{display:none}
+  .dstats{margin-top:8px}
+  .dstats div{padding:5px 9px;gap:1px}
+  .dstats b{font-size:13px}
+  .dstats span{font-size:8.5px}
+  .profile{margin-bottom:10px}
+  .cards{gap:10px;margin-top:8px}
+  .card{padding:12px 12px;gap:7px}
+  .card .ico{width:26px;height:26px}
+  .card .nm{font-size:15px}
+  .card .desc{font-size:12px;line-height:1.4}
+  .clock{font-size:26px}
+  .stats{font-size:11px;column-gap:10px}
+  .timeline{margin:5px 0 1px}
+  .xprail .lvl{min-width:24px;height:24px;font-size:13px}
+  #quests{width:200px}
+  .qrow .qn{font-size:9px}
+  .row{margin-top:12px}
+  .row button{padding:9px 12px;font-size:13px}
+  .grid,.achgrid,.colgrid{max-height:52vh}
+}
+
+/* --- язык: экран управления в двух версиях --- */
+html[lang="en"] .i18n-ru,html:not([lang="en"]) .i18n-en{display:none}
+.ctl-touch{display:none}
+.touch .ctl-touch{display:grid}
+.touch .ctl-desk,.touch #scrClass .hint{display:none}
+/* --- переключатель языка в углу главного меню --- */
+.langsw{position:absolute;right:14px;top:12px;display:flex;gap:4px;z-index:1}
+.langsw button{padding:4px 10px;font-family:var(--mono);font-size:10px;letter-spacing:1px;
+  text-transform:none;background:#0b1020;color:var(--muted)}
+.langsw button.on{color:var(--cyan);border-color:var(--cyan);background:#12203a}
+
+/* плашки на карточках арен заданы в CSS — переводим их здесь же */
+html[lang="en"] .arena.done:after{content:"CLEARED"}
+html[lang="en"] .arena.lock:after{content:"LOCKED"}
 </style>
 
 <canvas id="cv"></canvas>
@@ -691,8 +902,21 @@ h2 .shards{font-size:15px}
 </div>
 <div id="dash"><span>РЫВОК</span><span class="key" id="dashKey">SPACE</span></div>
 
+<!-- сенсорное управление: видно только в режиме касаний (body.touch) -->
+<div id="touchUi">
+  <div id="stick"><i></i></div>
+  <button class="tbtn" id="tPause" aria-label="Пауза"><b>II</b></button>
+  <button class="tbtn" id="tDash"><span>РЫВОК</span><em id="tDashCd"></em></button>
+  <button class="tbtn" id="tUlt"><span>УЛЬТА</span></button>
+  <button class="tbtn" id="tSkill"><span id="tSkillName">НАВЫК</span>
+    <span class="tch" id="tCharges"><i><b></b></i><i><b></b></i><i><b></b></i></span></button>
+</div>
+
 <div class="screen on" id="scrMenu">
   <div class="panel menupanel">
+    <div class="langsw" data-noi18n>
+      <button data-l="ru">Русский</button><button data-l="en">English</button>
+    </div>
     <div class="mleft">
       <p class="eyebrow">Забег начинается в полночь</p>
       <h1>Night<br><em>survivors</em></h1>
@@ -710,7 +934,14 @@ h2 .shards{font-size:15px}
     </div>
     <!-- правая колонка: сводка по сохранению, чтобы меню не было пустым -->
     <aside class="dossier">
+      <!-- профиль Яндекса: имя и аватар у вошедших, у гостей — кнопка входа с объяснением -->
+      <div class="profile" id="mProfile" hidden>
+        <span class="pava" id="pAva"></span>
+        <span class="ptx"><b id="pName">Гость</b><span id="pSub">Прогресс сохраняется в этом браузере</span></span>
+        <button class="plogin" id="bLogin" hidden>Войти</button>
+      </div>
       <p class="eyebrow">Досье оператора</p>
+      <p class="news" id="mNews" hidden></p>
       <div class="balance"><span class="bl">Осколков в банке</span>
         <span class="bv" id="mShards"></span></div>
       <div class="dstats" id="mStats"></div>
@@ -725,33 +956,82 @@ h2 .shards{font-size:15px}
   <div class="panel">
     <p class="eyebrow">Инструктаж</p>
     <h2>Управление</h2>
-    <div class="help">
-      <kbd>W A S D</kbd><span>Движение. Импланты стреляют <b>автоматически</b> — целься телом.</span>
-      <kbd>ЛКМ</kbd><span>Способность бьёт <b>в сторону курсора</b> и тратит один заряд.
-        Зарядов копится <b>до трёх</b>, кнопку можно держать. Дублируется на <b>Q</b>.</span>
-      <kbd>ПКМ</kbd><span><b>Ульта</b> — усиленная версия той же способности. Тратит
-        <b>все три заряда</b>, растёт вместе с уровнем навыка. Дублируется на <b>E</b>.</span>
-      <kbd>ПРОБЕЛ</kbd><span>Рывок. Во время рывка ты <b>неуязвим</b> и <b>всасываешь опыт</b>
-        вокруг себя — проходи сквозь толпу и забирай кристаллы на лету.</span>
-      <kbd>1 2 3</kbd><span>Выбор карты при повышении уровня (или мышкой).</span>
-      <kbd>ESC</kbd><span>Пауза.</span>
-      <kbd>M</kbd><span>Звук вкл/выкл.</span>
+    <!-- Экран целиком в двух языках и двух вариантах управления: текст
+         с выделениями посреди фраз по кусочкам не переводится. -->
+    <div class="i18n-ru" data-noi18n>
+      <div class="help ctl-desk">
+        <kbd>W A S D</kbd><span>Движение. Импланты стреляют <b>автоматически</b> — целься телом.</span>
+        <kbd>ЛКМ</kbd><span>Способность бьёт <b>в сторону курсора</b> и тратит один заряд.
+          Зарядов копится <b>до трёх</b>, кнопку можно держать. Дублируется на <b>Q</b>.</span>
+        <kbd>ПКМ</kbd><span><b>Ульта</b> — усиленная версия той же способности. Тратит
+          <b>все три заряда</b>, растёт вместе с уровнем персонажа. Дублируется на <b>E</b>.</span>
+        <kbd>ПРОБЕЛ</kbd><span>Рывок. Во время рывка ты <b>неуязвим</b> и <b>всасываешь опыт</b>
+          вокруг себя — проходи сквозь толпу и забирай кристаллы на лету.</span>
+        <kbd>1 2 3</kbd><span>Выбор карты при повышении уровня (или мышкой).</span>
+        <kbd>ESC</kbd><span>Пауза.</span>
+        <kbd>M</kbd><span>Звук вкл/выкл.</span>
+      </div>
+      <div class="help ctl-touch">
+        <kbd>ПАЛЕЦ</kbd><span>Коснись экрана где угодно и веди палец — появится джойстик.
+          Импланты стреляют <b>сами</b>, ты только двигаешься.</span>
+        <kbd>НАВЫК</kbd><span>Большая кнопка справа. Бьёт <b>в ближайшего врага</b>, тратит один
+          заряд из трёх. Можно держать.</span>
+        <kbd>УЛЬТА</kbd><span>Загорается, когда накоплены <b>все три заряда</b>.</span>
+        <kbd>РЫВОК</kbd><span>Короткая <b>неуязвимость</b> и сбор опыта на лету.</span>
+        <kbd>II</kbd><span>Пауза.</span>
+      </div>
+      <h2 style="margin-top:22px">Как это работает</h2>
+      <p class="lede">Враги рассыпаются на <span style="color:var(--lime)">дата-кристаллы</span> — подбирай их и выбирай
+        апгрейды. Прокачанный до максимума модуль <span style="color:var(--gold)">эволюционирует</span>, если
+        у тебя есть нужный имплант. Боссы выходят на 4:00, 8:00 и 12:00.</p>
+      <p class="lede">Сундук приносит бесплатный апгрейд, а каждый четвёртый —
+        <b style="color:var(--gold)">золотой</b> и даёт сразу несколько. Первый приходит на 00:45, дальше раз
+        в 45 секунд, а после 10:00 — почти вдвое чаще. Доживи до <b style="color:var(--ink)">15:00</b> — забег
+        засчитан, но за тобой придёт <span style="color:var(--magenta)">Жнец</span>: он быстрее тебя
+        и убивает с одного касания.</p>
+      <p class="lede">По кварталу разбросаны <span style="color:var(--gold)">неонки</span> — ломай их любым
+        уроном по площади. Внутри бывает аптечка или <span style="color:var(--cyan)">магнит</span>, который
+        разом стягивает к тебе весь опыт.</p>
+      <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки</span> — их тратят
+        в мастерской на постоянные улучшения. Они не сгорают при смерти, так что каждый забег двигает тебя дальше.</p>
     </div>
-    <h2 style="margin-top:26px">Как это работает</h2>
-    <p class="lede">Враги рассыпаются на <span style="color:var(--lime)">дата-кристаллы</span> — подбирай их и выбирай
-      апгрейды. Прокачанный до максимума модуль <span style="color:var(--gold)">эволюционирует</span>, если
-      у тебя есть нужный имплант. Боссы выходят на 4:00, 8:00 и 12:00.</p>
-    <p class="lede">Сундук приносит бесплатный апгрейд, а каждый четвёртый —
-      <b style="color:var(--gold)">золотой</b> и даёт сразу несколько. Достаётся он не даром:
-      помеченного элитника нужно выбить, первый приходит на 00:45, дальше раз в 45 секунд,
-      а после 10:00 — почти вдвое чаще. Доживи до <b style="color:var(--ink)">15:00</b> — забег
-      засчитан, но за тобой придёт <span style="color:var(--magenta)">Жнец</span>: он быстрее тебя
-      и убивает с одного касания.</p>
-    <p class="lede">По кварталу разбросаны <span style="color:var(--gold)">неонки</span> — ломай их любым
-      уроном по площади. Внутри бывает аптечка или <span style="color:var(--cyan)">магнит</span>, который
-      разом стягивает к тебе весь опыт и все аптечки с карты.</p>
-    <p class="lede">После забега ты уносишь <span style="color:var(--gold)">осколки</span> — их тратят
-      в мастерской на постоянные улучшения. Они не сгорают при смерти, так что каждый забег двигает тебя дальше.</p>
+    <div class="i18n-en" data-noi18n>
+      <div class="help ctl-desk">
+        <kbd>W A S D</kbd><span>Move. Your implants fire <b>automatically</b> — aim with your body.</span>
+        <kbd>LMB</kbd><span>Your ability fires <b>toward the cursor</b> and spends one charge.
+          Up to <b>three charges</b> build up, and you can hold the button. Also on <b>Q</b>.</span>
+        <kbd>RMB</kbd><span>The <b>ult</b> — a supercharged version of the same ability. Spends
+          <b>all three charges</b> and grows with your character level. Also on <b>E</b>.</span>
+        <kbd>SPACE</kbd><span>Dash. While dashing you're <b>invulnerable</b> and <b>vacuum up experience</b>
+          around you — cut through the crowd and grab crystals on the fly.</span>
+        <kbd>1 2 3</kbd><span>Pick a card on level up (or click it).</span>
+        <kbd>ESC</kbd><span>Pause.</span>
+        <kbd>M</kbd><span>Sound on/off.</span>
+      </div>
+      <div class="help ctl-touch">
+        <kbd>FINGER</kbd><span>Touch anywhere and drag — a joystick appears.
+          Your implants fire <b>on their own</b>, you just move.</span>
+        <kbd>SKILL</kbd><span>The big button on the right. Hits <b>the nearest enemy</b> and spends one
+          of three charges. You can hold it.</span>
+        <kbd>ULT</kbd><span>Lights up once <b>all three charges</b> are ready.</span>
+        <kbd>DASH</kbd><span>Brief <b>invulnerability</b> and grabbing experience on the fly.</span>
+        <kbd>II</kbd><span>Pause.</span>
+      </div>
+      <h2 style="margin-top:22px">How it works</h2>
+      <p class="lede">Enemies break into <span style="color:var(--lime)">data crystals</span> — collect them and pick
+        upgrades. A module upgraded to the max <span style="color:var(--gold)">evolves</span> if you have
+        the right implant. Bosses arrive at 4:00, 8:00 and 12:00.</p>
+      <p class="lede">A chest brings a free upgrade, and every fourth one is
+        <b style="color:var(--gold)">golden</b> and gives several at once. The first arrives at 00:45, then every
+        45 seconds, and after 10:00 almost twice as often. Survive to <b style="color:var(--ink)">15:00</b> and
+        the run counts — but the <span style="color:var(--magenta)">Reaper</span> comes for you: faster than you,
+        and one touch kills.</p>
+      <p class="lede">The quarter is dotted with <span style="color:var(--gold)">neon signs</span> — smash them with
+        any area damage. Inside you may find a medkit or a <span style="color:var(--cyan)">magnet</span> that
+        pulls all experience to you at once.</p>
+      <p class="lede">After a run you take home <span style="color:var(--gold)">shards</span> — spend them in the
+        workshop on permanent upgrades. They don't burn when you die, so every run pushes you further.</p>
+    </div>
     <div class="row"><button id="bHelpBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
@@ -782,6 +1062,15 @@ h2 .shards{font-size:15px}
     <p class="eyebrow">Куда идём</p>
     <h2>Арена</h2>
     <div class="arenas" id="arenaRow"></div>
+    <!-- появляется, когда на арене включена «Бесконечность» -->
+    <section class="lbpanel" id="lbPanel" hidden>
+      <div class="lbhead">
+        <span class="lbt">∞ Рекорды бесконечности</span>
+        <span class="lbtabs" id="lbTabs"></span>
+      </div>
+      <div class="lbbody" id="lbBody"></div>
+      <div class="lbfoot" id="lbFoot"></div>
+    </section>
     <div class="row"><button id="bArenaBack">Назад <span class="k">ESC</span></button></div>
   </div>
 </div>
@@ -840,11 +1129,28 @@ h2 .shards{font-size:15px}
   </div>
 </div>
 
+<!-- последний шанс: воскрешение за рекламу, раз за забег, только на Яндексе -->
+<div class="screen" id="scrRevive">
+  <div class="panel revivepanel">
+    <p class="eyebrow">Последний шанс</p>
+    <h2>Тебя погасили</h2>
+    <p class="lede">Можно вернуться в бой: посмотри рекламу — и поднимешься с частью здоровья,
+      а всё вокруг отбросит взрывом. Только один раз за забег.</p>
+    <div class="row">
+      <button class="primary" id="bRevive">Смотреть рекламу и воскреснуть <span class="k">ENTER</span></button>
+      <button id="bGiveUp">Завершить забег <span class="k">ESC</span></button>
+    </div>
+  </div>
+</div>
+
 <div class="screen" id="scrEnd">
   <div class="panel" style="width:min(660px,100%)">
     <p class="eyebrow" id="endEyebrow">Забег окончен</p>
     <h1 style="font-size:clamp(30px,5vw,52px)" id="endTitle">Тебя погасили</h1>
     <div class="tbl" id="endTbl"></div>
+    <div class="endrec" id="endRec" hidden></div>
+    <!-- кнопка только в сборке для Яндекса: текст прямо говорит, что это реклама и что дадут -->
+    <button class="reward" id="bReward" hidden>Смотреть рекламу <b id="rewardAmt"></b></button>
     <div class="endach" id="endAch"></div>
     <div class="break" id="endBreak"></div>
     <div class="row">
@@ -853,6 +1159,9 @@ h2 .shards{font-size:15px}
     </div>
   </div>
 </div>
+
+<!-- версия игры: в меню и на паузе, в бою прячется -->
+<div id="ver"></div>
 
 <div id="achPop"><span class="ai" id="achIco"></span>
   <span class="at"><span class="ar" id="achRar">Редкое достижение</span>

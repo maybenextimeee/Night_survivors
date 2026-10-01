@@ -19,9 +19,31 @@ const fmtTime = s => {
 };
 const $ = id => document.getElementById(id);
 
+/* Версия игры: меняется с каждым изменением, пишется в углу меню и в
+   CHANGELOG.md. Её же ставь в поле «Версия» черновика на Яндекс Играх. */
+const GAME_VERSION = "0.9.0";
+
+/* ---------- удалённая конфигурация -------------------------------------
+   Значения по умолчанию. На Яндекс Играх их можно переопределить флагами
+   в Консоли (вкладка «Флаги») без перезаливки архива — см. 06-platform.js
+   и docs/RELEASE-YANDEX.md. Здесь всё уже в нужных типах. */
+const REMOTE = {
+  xpMul: 1,            // множитель опыта
+  shardMul: 1,         // множитель осколков за забег
+  enemyHpMul: 1,       // множитель здоровья врагов
+  enemyDmgMul: 1,      // множитель урона врагов
+  chestEvery: 45,      // интервал сундуков до 10:00, секунды
+  rewardMul: 1,        // реклама за награду: сколько ещё «итогов забега» даёт
+  adBetweenRuns: true, // полноэкранная реклама между забегами
+  adRevive: true,      // воскрешение за рекламу
+  reviveHp: 0.5,       // с какой долей здоровья поднимает
+  news: ""             // строка-объявление в главном меню (пусто — не показываем)
+};
+
 /* Крупные числа разделяем тонким пробелом: обычный неразрывный из
    toLocaleString в моноширинном шрифте выглядит дырой. */
-const fmtNum = n => Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ");
+const fmtNum = n => Math.round(n).toLocaleString(
+  typeof I18N !== "undefined" && I18N.lang === "en" ? "en-US" : "ru-RU").replace(/ /g, " ");
 
 /* Фирменный осколок вместо знака «◈»: тот терялся среди цифр и выглядел
    как опечатка. Цвет наследуется через currentColor, поэтому одна и та же
@@ -116,8 +138,20 @@ const Sfx = {
     this.musicGain = this.ctx.createGain();
     this.musicGain.gain.value = 0.18;
     this.musicGain.connect(this.master);
+    /* контекст создаётся по первому клику — если в этот момент звук уже
+       держат (реклама на старте, окно без фокуса), сразу его усыпляем */
+    if (this.held) this.ctx.suspend();
   },
-  resume() { if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+  /* held — звук заглушён извне: вкладка скрыта, окно без фокуса, идёт
+     реклама. Пока держится, нажатия клавиш контекст не будят. */
+  held: false,
+  resume() { if (this.ctx && !this.held && this.ctx.state === "suspended") this.ctx.resume(); },
+  hold(on) {
+    this.held = on;
+    if (!this.ctx) return;
+    if (on) { if (this.ctx.state === "running") this.ctx.suspend(); }
+    else if (this.ctx.state === "suspended") this.ctx.resume();
+  },
   toggle() {
     this.on = !this.on;
     if (this.master) this.master.gain.value = this.on ? 0.5 : 0;
@@ -209,25 +243,49 @@ const defaultSave = () => ({
   /* модификаторы по аренам: { quarter: { hyper: true, endless: false }, … } */
   mods: {},
   /* достижения и список уже собранных эволюций — по ним считаются ачивки */
-  ach: [], evoSeen: []
+  ach: [], evoSeen: [],
+  /* личные рекорды бесконечности по аренам: { quarter: [секунды, …] } */
+  records: {},
+  /* номер правки: растёт с каждой записью, по нему выбираем между
+     локальным и облачным сохранением, когда остальное равно */
+  rev: 0
 });
 let save = defaultSave();
+
+/* Приводит сохранение любого происхождения (localStorage, облако Яндекса,
+   старая версия игры) к текущей форме: недостающие поля — по умолчанию. */
+function normalizeSave(raw) {
+  const s = Object.assign(defaultSave(), raw && typeof raw === "object" ? raw : {});
+  if (!s.meta || typeof s.meta !== "object") s.meta = {};
+  if (!Array.isArray(s.unlocked)) s.unlocked = [];
+  s.total = Object.assign(DEF_TOTAL(), s.total && typeof s.total === "object" ? s.total : {});
+  if (!Array.isArray(s.arenaDone)) s.arenaDone = [];
+  if (!s.mods || typeof s.mods !== "object") s.mods = {};
+  if (!Array.isArray(s.ach)) s.ach = [];
+  if (!Array.isArray(s.evoSeen)) s.evoSeen = [];
+  if (!s.records || typeof s.records !== "object") s.records = {};
+  if (typeof s.arena !== "number") s.arena = 0;
+  if (typeof s.rev !== "number") s.rev = 0;
+  return s;
+}
 function loadSave() {
+  let raw = null;
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const txt = localStorage.getItem(SAVE_KEY);
     /* пустое хранилище тоже сбрасывает состояние, иначе повторный вызов
        тащил бы за собой прежний прогресс */
-    save = raw ? Object.assign(defaultSave(), JSON.parse(raw)) : defaultSave();
+    raw = txt ? JSON.parse(txt) : null;
   } catch (e) { /* приватный режим или битые данные — играем с нуля */ }
-  if (!save.meta || typeof save.meta !== "object") save.meta = {};
-  if (!Array.isArray(save.unlocked)) save.unlocked = [];
-  if (!save.total || typeof save.total !== "object") save.total = DEF_TOTAL();
-  else save.total = Object.assign(DEF_TOTAL(), save.total);
-  if (!Array.isArray(save.arenaDone)) save.arenaDone = [];
-  if (!save.mods || typeof save.mods !== "object") save.mods = {};
-  if (!Array.isArray(save.ach)) save.ach = [];
-  if (!Array.isArray(save.evoSeen)) save.evoSeen = [];
-  if (typeof save.arena !== "number") save.arena = 0;
+  save = normalizeSave(raw);
+}
+/* Какое из двух сохранений «дальше»: сначала по заработанным за всё время
+   осколкам (растут только от игры), потом по числу забегов, потом по
+   номеру правки — он ловит покупки в мастерской. Положительное — a впереди. */
+function compareSaves(a, b) {
+  const ea = (a.total && a.total.earned) || 0, eb = (b.total && b.total.earned) || 0;
+  if (ea !== eb) return ea - eb;
+  if ((a.runs || 0) !== (b.runs || 0)) return (a.runs || 0) - (b.runs || 0);
+  return (a.rev || 0) - (b.rev || 0);
 }
 
 /* базовый набор доступен сразу, остальное копится в save.unlocked */
@@ -238,21 +296,40 @@ const BASE_UNLOCKED = [
 ];
 function isUnlocked(id) { return BASE_UNLOCKED.indexOf(id) >= 0 || save.unlocked.indexOf(id) >= 0; }
 function writeSave() {
+  save.rev = (save.rev || 0) + 1;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { }
+  /* в облако — с задержкой: у Яндекса лимит 100 записей за 5 минут */
+  if (typeof Platform !== "undefined") Platform.queueCloud();
 }
 const metaLvl = id => save.meta[id] || 0;
 
 /* ---------- ввод ------------------------------------------------------ */
+/* Клавиши берём по физическому положению (e.code), а не по символу:
+   иначе на русской раскладке WASD превращается в ЦФЫВ, на других — во что
+   угодно. Яндекс Игры требуют, чтобы управление не зависело от раскладки
+   (пункт 1.6.2.4), поэтому дальше по коду везде латинские имена. */
+function keyName(e) {
+  const c = e.code || "";
+  if (c.indexOf("Key") === 0) return c.slice(3).toLowerCase();
+  if (c.indexOf("Digit") === 0) return c.slice(5);
+  if (/^Numpad\d$/.test(c)) return c.slice(6);
+  if (c === "Space") return " ";
+  if (c === "ShiftLeft" || c === "ShiftRight") return "shift";
+  if (c === "Escape") return "escape";
+  if (c === "Enter" || c === "NumpadEnter") return "enter";
+  if (c.indexOf("Arrow") === 0) return "arrow" + c.slice(5).toLowerCase();
+  return (e.key || "").toLowerCase();
+}
 const keys = Object.create(null);
 const pressed = Object.create(null);
 addEventListener("keydown", e => {
-  const k = e.key.toLowerCase();
+  const k = keyName(e);
   if (!keys[k]) pressed[k] = true;
   keys[k] = true;
   if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].indexOf(k) >= 0) e.preventDefault();
   Sfx.resume();
 });
-addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+addEventListener("keyup", e => { keys[keyName(e)] = false; });
 addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
 function tookKey(k) { if (pressed[k]) { pressed[k] = false; return true; } return false; }
 function clearPressed() { for (const k in pressed) pressed[k] = false; }
@@ -270,15 +347,18 @@ addEventListener("mousedown", e => {
 });
 addEventListener("mouseup", e => { if (e.button === 2) mouse.right = false; else mouse.down = false; });
 addEventListener("blur", () => { mouse.down = mouse.right = false; });
-/* по правой кнопке уходит ульта — контекстное меню на холсте не нужно */
-addEventListener("contextmenu", e => { if (e.target && e.target.id === "cv") e.preventDefault(); });
+/* по правой кнопке уходит ульта, а контекстное меню в игре не нужно нигде —
+   Яндекс отдельно проверяет, что клик по полю его не открывает (1.6.2.7) */
+addEventListener("contextmenu", e => e.preventDefault());
 
 function axis() {
+  /* палец на джойстике главнее клавиш: вектор уже аналоговый */
+  if (typeof Touch !== "undefined" && Touch.stickId !== null) return { x: Touch.axis.x, y: Touch.axis.y };
   let x = 0, y = 0;
-  if (keys.a || keys.arrowleft || keys["ф"]) x -= 1;
-  if (keys.d || keys.arrowright || keys["в"]) x += 1;
-  if (keys.w || keys.arrowup || keys["ц"]) y -= 1;
-  if (keys.s || keys.arrowdown || keys["ы"]) y += 1;
+  if (keys.a || keys.arrowleft) x -= 1;
+  if (keys.d || keys.arrowright) x += 1;
+  if (keys.w || keys.arrowup) y -= 1;
+  if (keys.s || keys.arrowdown) y += 1;
   if (x && y) { const k = Math.SQRT1_2; x *= k; y *= k; }
   return { x: x, y: y };
 }

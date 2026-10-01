@@ -3,7 +3,7 @@ const UI = {
   screens: {
     menu: $("scrMenu"), help: $("scrHelp"), shop: $("scrShop"), chars: $("scrChars"),
     class: $("scrClass"), level: $("scrLevel"), pause: $("scrPause"), end: $("scrEnd"),
-    collection: $("scrCollection"), arena: $("scrArena"), ach: $("scrAch")
+    collection: $("scrCollection"), arena: $("scrArena"), ach: $("scrAch"), revive: $("scrRevive")
   },
   achQ: [], achBusy: false,
   cards: [],
@@ -13,7 +13,20 @@ const UI = {
   },
   hideAll() { this.show(""); },
 
+  /* Панель заданий висит под левым блоком HUD. Высота блока меняется:
+     узкое окно переносит статистику в несколько строк, появляется «Разгон».
+     Раскладку читаем только когда изменилось то, что влияет на перенос, —
+     не каждый кадр. */
+  placeQuests() {
+    const key = innerWidth + "|" + !$("rushStat").hidden + "|" + $("sKills").textContent.length +
+      "|" + $("sGold").textContent.length + "|" + $("sChest").textContent.length;
+    if (key === this._qTopKey) return;
+    this._qTopKey = key;
+    const left = document.querySelector(".topbar > div");
+    $("quests").style.top = Math.max(104, left.getBoundingClientRect().bottom + 10) + "px";
+  },
   enterPlay() {
+    this._qTopKey = "";
     this.hideAll();
     $("hud").classList.add("on");
     $("rack").classList.add("on");
@@ -27,6 +40,7 @@ const UI = {
     this.buildTimeline();
   },
   leavePlay() {
+    Touch.reset();
     $("hud").classList.remove("on");
     $("rack").classList.remove("on");
     $("dash").classList.remove("on");
@@ -58,7 +72,7 @@ const UI = {
     $("sWave").textContent = Math.floor(g.time / 60) + 1;
     /* до следующего сундука: золотой подсвечиваем заранее, чтобы было за чем бежать */
     const cl = chestLeft();
-    $("sChest").textContent = cl > 9.95 ? Math.ceil(cl) + " с" : cl.toFixed(1) + " с";
+    $("sChest").textContent = t("{0} с", cl > 9.95 ? Math.ceil(cl) : cl.toFixed(1));
     $("chestStat").classList.toggle("gold", chestGoldNext());
     this.syncTimeline();
     const hk = clamp(p.hp / p.maxHp, 0, 1);
@@ -107,7 +121,9 @@ const UI = {
     const ready = p.abCharge >= AB_CHARGES;
     $("skill").classList.toggle("ready", ready);
     $("skillKey").classList.toggle("rdy", p.abCharge >= 1);
-    $("skillKey").textContent = p.abCharge >= 1 ? "ЛКМ" : (abCdSec(p) * (1 - p.abCharge)).toFixed(1);
+    $("skillKey").textContent = p.abCharge >= 1 ? t("ЛКМ") : (abCdSec(p) * (1 - p.abCharge)).toFixed(1);
+    if (Touch.on) Touch.sync(p);
+    this.placeQuests();
     this.syncQuests();
   },
 
@@ -133,22 +149,22 @@ const UI = {
   syncTimeline() {
     if (!this._mEls) return;
     /* в бесконечности линейка показывает текущий круг, а не весь забег */
-    const t = g.time - g.cycle * RUN_LEN;
-    this._tlFill.style.width = (clamp(t / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
+    const ct = g.time - g.cycle * RUN_LEN;
+    this._tlFill.style.width = (clamp(ct / RUN_LEN, 0, 1) * 100).toFixed(2) + "%";
     if (g.cycle !== this._cyc) {
       this._cyc = g.cycle;
       const tag = $("cycTag");
       tag.hidden = g.cycle < 1;
-      tag.textContent = "КРУГ " + (g.cycle + 1);
+      tag.textContent = t("КРУГ {0}", g.cycle + 1);
       this._tlNext = -2;                        // после смены круга метки пересчитываем
     }
     /* классы трогаем только когда ближайший босс сменился */
     let next = -1;
-    for (let i = 0; i < this._marks.length; i++) if (t < this._marks[i].t) { next = i; break; }
+    for (let i = 0; i < this._marks.length; i++) if (ct < this._marks[i].t) { next = i; break; }
     if (next === this._tlNext) return;
     this._tlNext = next;
     for (let i = 0; i < this._mEls.length; i++) {
-      this._mEls[i].classList.toggle("past", t >= this._marks[i].t);
+      this._mEls[i].classList.toggle("past", ct >= this._marks[i].t);
       this._mEls[i].classList.toggle("next", i === next);
     }
   },
@@ -191,19 +207,19 @@ const UI = {
     if (p) {
       const pct = v => Math.round(v * 100) + "%";
       const rows = [
-        ["Урон", "×" + p.dmgMul.toFixed(2)],
-        ["Откат", "−" + Math.round((1 - p.cdMul) * 100) + "%"],
-        ["Площадь", "×" + p.areaMul.toFixed(2)],
-        ["Длительность", "×" + p.durMul.toFixed(2)],
-        ["Скорость", Math.round(p.speed) + " px/с"],
-        ["Броня", "−" + p.armor.toFixed(0)],
-        ["Регенерация", p.regen.toFixed(1) + "/с"],
-        ["Радиус сбора", Math.round(p.pickR) + " px"],
-        ["Добыча", "×" + p.greedMul.toFixed(2)],
-        ["Опыт", "×" + p.xpMul.toFixed(2)],
-        ["Снарядов", "+" + p.countBonus],
-        ["Урон ульты", "×" + p.ultMul.toFixed(2)],
-        ["Удача", "+" + pct(p.luck)]
+        [t("Урон"), "×" + p.dmgMul.toFixed(2)],
+        [t("Откат"), "−" + Math.round((1 - p.cdMul) * 100) + "%"],
+        [t("Площадь"), "×" + p.areaMul.toFixed(2)],
+        [t("Длительность"), "×" + p.durMul.toFixed(2)],
+        [t("Скорость"), Math.round(p.speed) + t(" px/с")],
+        [t("Броня"), "−" + p.armor.toFixed(0)],
+        [t("Регенерация"), p.regen.toFixed(1) + t("/с")],
+        [t("Радиус сбора"), Math.round(p.pickR) + " px"],
+        [t("Добыча"), "×" + p.greedMul.toFixed(2)],
+        [t("Опыт"), "×" + p.xpMul.toFixed(2)],
+        [t("Снарядов"), "+" + p.countBonus],
+        [t("Урон ульты"), "×" + p.ultMul.toFixed(2)],
+        [t("Удача"), "+" + pct(p.luck)]
       ];
       $("pauseStats").innerHTML = rows.map(r => "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
     } else $("pauseStats").innerHTML = "";
@@ -275,7 +291,8 @@ const UI = {
     $("skillIco").innerHTML = svg(ICONS[ab.ico], ab.color);
     $("skillName").textContent = ab.name;
     $("skillPips").innerHTML = pips(p.abLvl, ab.max);
-    $("ultKey").textContent = ab.ult.short + " · ПКМ";
+    $("ultKey").textContent = ab.ult.short + t(" · ПКМ");
+    $("tSkillName").textContent = ab.name.toUpperCase();
   },
 
   /* ---- выбор арены ---- */
@@ -307,10 +324,10 @@ const UI = {
       el.innerHTML =
         '<span class="tag">' + ar.tag + "</span>" +
         '<span class="nm">' + ar.name + "</span>" +
-        '<span class="ds">' + (open ? ar.d : "Закрой «" + ARENAS[i - 1].name + "», чтобы попасть сюда.") + "</span>" +
-        '<span class="mt"><span>Сложность <b>×' + (ar.mult * (mods.hyper && done ? ARENA_MODS[0].hp : 1)).toFixed(2) + "</b></span>" +
-        "<span>Боссов <b>" + BOSSES.filter(b => b.arena === i).length + "</b></span>" +
-        "<span>" + (mods.endless && done ? "<b>Без Жнеца</b>" : last ? "<b>Финал игры</b>" : "Финал <b>Жнец</b>") + "</span>" +
+        '<span class="ds">' + (open ? ar.d : t("Закрой «{0}», чтобы попасть сюда.", ARENAS[i - 1].name)) + "</span>" +
+        '<span class="mt"><span>' + t("Сложность") + ' <b>×' + (ar.mult * (mods.hyper && done ? ARENA_MODS[0].hp : 1)).toFixed(2) + "</b></span>" +
+        "<span>" + t("Боссов") + " <b>" + BOSSES.filter(b => b.arena === i).length + "</b></span>" +
+        "<span>" + (mods.endless && done ? "<b>" + t("Без Жнеца") + "</b>" : last ? "<b>" + t("Финал игры") + "</b>" : t("Финал") + " <b>" + t("Жнец") + "</b>") + "</span>" +
         '<span class="prev">' + mobs + "</span></span>" + modBox + hint;
       if (done) el.querySelectorAll(".mod").forEach(b => b.addEventListener("click", e => {
         e.stopPropagation();                    // щелчок по галочке не стартует арену
@@ -324,15 +341,82 @@ const UI = {
       }
       row.appendChild(el);
     });
+    this.syncBoard();
     this.show("arena");
     setTimeout(() => { const b = row.querySelector(".arena:not(.lock)"); if (b) b.focus(); }, 30);
   },
   toggleMod(arenaId, modId) {
-    const cur = save.mods[arenaId] || (save.mods[arenaId] = {});
-    cur[modId] = !cur[modId];
+    const m = save.mods[arenaId] || (save.mods[arenaId] = {});
+    m[modId] = !m[modId];
+    if (modId === "endless" && m.endless) this.lbArena = arenaId;
     writeSave();
     Sfx.init(); Sfx.resume(); Sfx.pick();
     this.showArenas();
+  },
+
+  /* ---- таблица рекордов бесконечности ----
+     Видна, пока хоть на одной пройденной арене стоит «Бесконечность».
+     Вкладки — все арены, где бесконечность вообще доступна. */
+  syncBoard() {
+    const panel = $("lbPanel");
+    const avail = ARENAS.filter((a, i) => modsAllowed(i));
+    const on = avail.filter(a => arenaMods(a.id).endless);
+    if (!on.length) { panel.hidden = true; return; }
+    if (!this.lbArena || !avail.some(a => a.id === this.lbArena))
+      this.lbArena = (on.find(a => ARENAS.indexOf(a) === save.arena) || on[0]).id;
+    panel.hidden = false;
+    $("lbTabs").innerHTML = avail.map(a =>
+      '<button data-a="' + a.id + '" style="--ac:' + a.accent + '"' +
+      (a.id === this.lbArena ? ' class="on"' : "") + ">" + a.name + "</button>").join("");
+    $("lbTabs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      this.lbArena = b.dataset.a;
+      Sfx.pick();
+      this.syncBoard();
+    }));
+    this.renderBoard(this.lbArena);
+  },
+  async renderBoard(arenaId) {
+    const body = $("lbBody"), foot = $("lbFoot");
+    const pb = Platform.personalBest(arenaId);
+    const mine = save.records[arenaId] || [];
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const row = (rank, name, score, me, ava) =>
+      '<div class="lbrow' + (rank <= 3 ? " r" + rank : "") + (me ? " me" : "") + '">' +
+      '<span class="rk">#' + rank + "</span>" +
+      '<span class="av">' + (ava ? '<img src="' + esc(ava) + '" alt="">' : esc((name || "?").charAt(0).toUpperCase())) + "</span>" +
+      '<span class="nm">' + esc(name || t("Игрок скрыт")) + "</span>" +
+      '<span class="sc">' + fmtTime(score) + "</span></div>";
+
+    /* без SDK — честно говорим, где живёт общая таблица, и показываем свои */
+    if (!Platform.yandex) {
+      body.innerHTML = mine.length
+        ? mine.map((v, i) => row(i + 1, t("Ты"), v, true, "")).join("")
+        : '<div class="lbmsg">' + t("Здесь пока пусто. Включи «Бесконечность» и продержись подольше.") + "</div>";
+      foot.innerHTML = "<span>" + t("Общая таблица игроков — в версии на Яндекс Играх. Тут твои лучшие забеги.") + "</span>";
+      return;
+    }
+    body.innerHTML = '<div class="lbmsg">' + t("Загружаю таблицу…") + "</div>";
+    const data = await Platform.board(arenaId);
+    if (this.lbArena !== arenaId) return;              // пока грузилось, переключили вкладку
+    if (!data.ok) {
+      body.innerHTML = '<div class="lbmsg">' + t("Таблица сейчас недоступна. Попробуй чуть позже.") + "</div>";
+    } else if (!data.rows.length) {
+      body.innerHTML = '<div class="lbmsg">' + t("Рекордов пока нет — стань первым.") + "</div>";
+    } else {
+      /* топ, а ниже — своя строка, если сам в топ не попал */
+      const top = data.rows.filter(r => r.rank <= LB_TOP);
+      const rest = data.rows.filter(r => r.rank > LB_TOP && r.me);
+      body.innerHTML = top.map(r => row(r.rank, r.name, r.score, r.me, r.avatar)).join("") +
+        (rest.length ? '<div class="lbgap">⋯</div>' + rest.map(r => row(r.rank, r.name, r.score, true, r.avatar)).join("") : "");
+    }
+    foot.innerHTML = Platform.authorized
+      ? "<span>" + t("Твой рекорд:") + " <b>" + (pb ? fmtTime(pb) : "—") + "</b>" +
+        (data.ok && data.userRank ? " · " + t("место") + " <b>#" + data.userRank + "</b>" : "") + "</span>"
+      : "<span>" + t("Твой рекорд:") + " <b>" + (pb ? fmtTime(pb) : "—") + '</b></span><span class="sp"></span>' +
+        "<span>" + t("Войди, чтобы попасть в таблицу и сохранять прогресс на всех устройствах") + "</span>" +
+        '<button id="bLbLogin">' + t("Войти через Яндекс") + "</button>";
+    const lb = $("bLbLogin");
+    if (lb) lb.addEventListener("click", () => this.login());
   },
   pickArena(i) {
     if (!arenaUnlocked(i)) return;
@@ -354,11 +438,11 @@ const UI = {
       (f[key] === val ? ' class="on"' : "") +
       (color ? ' style="--rr:' + color + '"' : "") + ">" + label +
       (count == null ? "" : "<i>" + count + "</i>") + "</button>";
-    h += btn("st", "all", "Все", ACHIEVEMENTS.length);
-    h += btn("st", "got", "Получено", nGot);
-    h += btn("st", "left", "Закрыто", ACHIEVEMENTS.length - nGot);
+    h += btn("st", "all", t("Все"), ACHIEVEMENTS.length);
+    h += btn("st", "got", t("Получено"), nGot);
+    h += btn("st", "left", t("Закрыто"), ACHIEVEMENTS.length - nGot);
     h += '<span class="sep"></span>';
-    h += btn("rar", -1, "Любая");
+    h += btn("rar", -1, t("Любая"));
     ACH_RARITY.forEach((r, i) =>
       h += btn("rar", i, r.name, ACHIEVEMENTS.filter(a => a.rar === i).length, r.color));
     $("achFilters").innerHTML = h;
@@ -386,7 +470,7 @@ const UI = {
     });
     $("achBarFill").style.width = (save.ach.length / ACHIEVEMENTS.length * 100).toFixed(1) + "%";
     if (!list.length) {
-      grid.innerHTML = '<div class="none">Под этот фильтр ничего не подходит.</div>';
+      grid.innerHTML = '<div class="none">' + t("Под этот фильтр ничего не подходит.") + "</div>";
       $("achCount").textContent = save.ach.length + " / " + ACHIEVEMENTS.length;
       return;
     }
@@ -415,7 +499,7 @@ const UI = {
     const el = $("achPop");
     el.style.setProperty("--rar", r.color);
     $("achIco").innerHTML = svg(ICONS[a.ico], r.color);
-    $("achRar").textContent = r.name + " достижение";
+    $("achRar").textContent = t("{0} достижение", r.name);
     $("achName").textContent = a.name;
     $("achDesc").textContent = a.d;
     el.classList.remove("on");
@@ -443,8 +527,8 @@ const UI = {
         '<div class="top">' + svg(ICONS[ab.ico], ab.color) +
         '<div><div class="role">' + ab.role + '</div><div class="nm">' + ab.name + "</div></div></div>" +
         '<div class="desc">' + ab.text + ' <b style="color:' + ab.color + '">' + ab.hint + "</b><br><br>" +
-        '<span style="color:var(--gold)">Ульта · ' + ab.ult.name + ":</span> " + ab.ult.text + "</div>" +
-        '<div class="foot"><span class="cd">ЗАРЯД ' + ab.s(1).cd.toFixed(1) + ' С · ДО УР. ' + ab.max + '</span>' +
+        '<span style="color:var(--gold)">' + t("Ульта") + " · " + ab.ult.name + ":</span> " + ab.ult.text + "</div>" +
+        '<div class="foot"><span class="cd">' + t("ЗАРЯД {0} С · ДО УР. {1}", ab.s(1).cd.toFixed(1), ab.max) + '</span>' +
         '<span class="key">' + (i + 1) + "</span></div>";
       el.addEventListener("click", () => this.pickClass(id));
       row.appendChild(el);
@@ -482,16 +566,16 @@ const UI = {
       el.className = "card" + (c.kind === "wnew" || c.kind === "pnew" ? " new" : "") +
         (c.kind === "pup" || c.kind === "pnew" ? " pas" : "") + tier +
         (canBanish(c) ? " canban" : "");
-      const kind = c.kind === "wnew" ? "Новое оружие"
-          : c.kind === "wup" ? "Оружие · ур. " + (c.w.lvl + 1)
-            : c.kind === "abup" ? "Способность · ур. " + (c.lvl + 1)
-              : c.kind === "pnew" ? "Новый навык"
-                : c.kind === "pup" ? "Навык · ур. " + (c.lvl + 1)
-                  : "Находка";
+      const kind = c.kind === "wnew" ? t("Новое оружие")
+          : c.kind === "wup" ? t("Оружие · ур. {0}", c.w.lvl + 1)
+            : c.kind === "abup" ? t("Способность · ур. {0}", c.lvl + 1)
+              : c.kind === "pnew" ? t("Новый навык")
+                : c.kind === "pup" ? t("Навык · ур. {0}", c.lvl + 1)
+                  : t("Находка");
       let desc = def.text;
       if (c.kind === "wup" && def.up) desc = def.text + " <b style='color:" + def.color + "'>" + def.up(c.w.lvl + 1) + "</b>";
       if (c.kind === "abup") desc = def.text + " <b style='color:" + def.color + "'>" + def.up(c.lvl + 1) + "</b>";
-      if (c.kind === "pup" || c.kind === "pnew") desc = def.text + " <b style='color:" + def.color + "'>Итого: " + def.val(c.lvl + 1) + "</b>";
+      if (c.kind === "pup" || c.kind === "pnew") desc = def.text + " <b style='color:" + def.color + "'>" + t("Итого:") + " " + def.val(c.lvl + 1) + "</b>";
       let foot = "";
       if (c.kind === "wup") foot = '<span class="pips">' + pips(c.w.lvl + 1, def.max) + "</span>";
       else if (c.kind === "abup" || c.kind === "pup" || c.kind === "pnew") foot = '<span class="pips">' + pips(c.lvl + 1, def.max) + "</span>";
@@ -500,7 +584,7 @@ const UI = {
         '<div><div class="kind">' + kind + '</div><div class="nm">' + def.name + "</div></div></div>" +
         '<div class="desc">' + desc + "</div>" +
         '<div class="foot">' + foot + '<span class="key">' + (i + 1) + "</span></div>" +
-        (canBanish(c) ? '<span class="ban" title="Изгнать до конца забега">✕</span>' : "");
+        (canBanish(c) ? '<span class="ban" title="' + t("Изгнать до конца забега") + '">✕</span>' : "");
       el.addEventListener("click", ev => {
         if (ev.target.classList.contains("ban")) { ev.stopPropagation(); banishCard(c); return; }
         takeCard(c);
@@ -520,30 +604,90 @@ const UI = {
 
   showEnd(won, s) {
     this.leavePlay();
-    $("endEyebrow").textContent = won ? "Забег закрыт" : "Забег окончен";
-    $("endTitle").textContent = won ? "Ты дожил до рассвета" : "Ты проиграл";
+    $("endEyebrow").textContent = won ? t("Забег закрыт") : t("Забег окончен");
+    $("endTitle").textContent = won ? t("Ты дожил до рассвета") : t("Ты проиграл");
     const rows = [
-      ["Продержался", fmtTime(s.time)],
-      ["Убито", fmtNum(s.kills)],
-      ["Уровень", s.level],
-      ["Собрано осколков", fmtNum(s.gold)],
-      ["Премия за боссов", fmtNum(s.bonus)],
-      ["Премия за задания", fmtNum(s.quests)],
-      ["Множитель добычи", "×" + s.greed.toFixed(2)]
+      [t("Продержался"), fmtTime(s.time)],
+      [t("Убито"), fmtNum(s.kills)],
+      [t("Уровень"), s.level],
+      [t("Собрано осколков"), fmtNum(s.gold)],
+      [t("Премия за боссов"), fmtNum(s.bonus)],
+      [t("Премия за задания"), fmtNum(s.quests)],
+      [t("Множитель добычи"), "×" + s.greed.toFixed(2)]
     ];
-    if (s.cycle > 0) rows.splice(1, 0, ["Кругов пройдено", s.cycle]);
-    if (s.mods > 1.001) rows.push(["Модификаторы арены", "×" + s.mods.toFixed(2)]);
-    if (s.crits) rows.splice(3, 0, ["Пробоев брони", fmtNum(s.crits)]);
-    if (won) rows.push(["Бонус за победу", "×1.50"]);
+    if (s.cycle > 0) rows.splice(1, 0, [t("Кругов пройдено"), s.cycle]);
+    if (s.mods > 1.001) rows.push([t("Модификаторы арены"), "×" + s.mods.toFixed(2)]);
+    if (s.crits) rows.splice(3, 0, [t("Пробоев брони"), fmtNum(s.crits)]);
+    if (won) rows.push([t("Бонус за победу"), "×1.50"]);
     let h = "";
     for (const r of rows) h += '<div class="l">' + r[0] + '</div><div class="v">' + r[1] + "</div>";
     h += "<hr>";
-    h += '<div class="l tot">Итого осколков</div><div class="v tot">+' + cur(s.total) + "</div>";
+    h += '<div class="l tot">' + t("Итого осколков") + '</div><div class="v tot">+' + cur(s.total) + "</div>";
     $("endTbl").innerHTML = h;
+    /* бесконечность: показываем личный рекорд и куда ушёл результат */
+    const rec = $("endRec");
+    rec.hidden = !s.endless;
+    if (s.endless && s.rec) {
+      rec.innerHTML = (s.rec.best ? '<span class="new">' + t("НОВЫЙ РЕКОРД") + "</span>" : "") +
+        "<span>" + t("Рекорд бесконечности:") + " <b>" + fmtTime(Math.max(s.time, s.rec.prev)) + "</b></span>" +
+        (Platform.yandex
+          ? "<span>" + (Platform.authorized ? t("· результат отправлен в таблицу") : t("· войди через Яндекс, чтобы попасть в таблицу")) + "</span>"
+          : "");
+    }
+    /* реклама за награду — только на Яндексе и только если есть что удваивать;
+       размер настраивается флагом reward_mul */
+    this._reward = Math.round(s.total * REMOTE.rewardMul);
+    const rb = $("bReward");
+    rb.hidden = !Platform.yandex || this._reward <= 0;
+    rb.disabled = false;
+    rb.innerHTML = t("Смотреть рекламу: ещё +") + cur(this._reward);
     this.buildRunAch(s.ach);
     this.buildBreakdown();
     this.show("end");
     this.syncShards();
+  },
+  showRevive() {
+    $("bRevive").disabled = false;
+    this.show("revive");
+  },
+  watchRevive() {
+    const b = $("bRevive");
+    if (b.disabled || g.state !== "revive") return;
+    b.disabled = true;
+    Platform.rewarded(() => { this._revived = true; }, got => {
+      if (got && this._revived) { this._revived = false; adRevive(); }
+      else b.disabled = false;       // закрыл раньше — можно попробовать ещё раз или сдаться
+    });
+  },
+  giveUp() {
+    if (g.state !== "revive") return;
+    endRun(g.won);
+  },
+  claimReward() {
+    const rb = $("bReward");
+    if (rb.disabled || !this._reward) return;
+    rb.disabled = true;
+    const amount = this._reward;
+    Platform.rewarded(() => {
+      save.shards += amount;
+      save.total.earned += amount;
+      writeSave();
+      Platform.pushCloud(true);
+    }, got => {
+      if (got) {
+        this._reward = 0;
+        rb.innerHTML = t("Награда получена: +") + cur(amount);
+        this.toast(t("+{0} ОСКОЛКОВ", fmtNum(amount)));
+        Sfx.coin();
+        this.syncShards();
+      } else rb.disabled = false;   // закрыл раньше времени — кнопка снова доступна
+    });
+  },
+  async login() {
+    const ok = await Platform.login();
+    this.syncShards();
+    if (ok) this.toast(t("ВХОД ВЫПОЛНЕН"));
+    if (this.current === "arena") this.showArenas();
   },
 
   /* что открылось именно за этот забег: всплывашки в бою легко пропустить */
@@ -552,7 +696,7 @@ const UI = {
     const list = (ids || []).map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
     box.classList.toggle("on", list.length > 0);
     if (!list.length) { box.innerHTML = ""; return; }
-    box.innerHTML = '<div class="eh">Достижений за забег: ' + list.length + "</div>" +
+    box.innerHTML = '<div class="eh">' + t("Достижений за забег: {0}", list.length) + "</div>" +
       '<div class="er">' + list.map(a => {
         const r = ACH_RARITY[a.rar];
         return '<div class="ea" style="--rar:' + r.color + '">' + svg(ICONS[a.ico], r.color) +
@@ -573,7 +717,7 @@ const UI = {
     const box = $("endBreak");
     if (!rows.length) { box.innerHTML = ""; return; }
     const total = rows.reduce((s, r) => s + r.dmg, 0) || 1;
-    let h = '<div class="bhead"><span>Источник</span><span>Урон</span><span>Доля</span><span>Убийств</span></div>';
+    let h = '<div class="bhead"><span>' + t("Источник") + "</span><span>" + t("Урон") + "</span><span>" + t("Доля") + "</span><span>" + t("Убийств") + "</span></div>";
     for (const r of rows) {
       const pct = r.dmg / total * 100;
       h += '<div class="brow' + (r.ab ? " ab" : "") + '">' +
@@ -599,15 +743,31 @@ const UI = {
   /* Досье: то же сохранение, но в лицо — иначе главное меню было просто
      столбиком кнопок, а цифры прятались по вложенным экранам. */
   buildDossier() {
+    const prof = $("mProfile");
+    prof.hidden = !Platform.yandex;
+    if (Platform.yandex) {
+      const auth = Platform.authorized;
+      prof.classList.toggle("on", auth);
+      $("pName").textContent = auth ? (Platform.name || t("Игрок")) : t("Гость");
+      $("pSub").textContent = auth
+        ? t("Прогресс в облаке Яндекса — доступен на всех устройствах")
+        : t("Войди, чтобы сохранять прогресс на всех устройствах и попасть в таблицу рекордов");
+      $("pAva").innerHTML = auth && Platform.avatar ? '<img src="' + Platform.avatar + '" alt="">'
+        : (auth ? (Platform.name || "И").charAt(0).toUpperCase() : "?");
+      $("bLogin").hidden = auth;
+    }
+    const news = $("mNews");
+    news.hidden = !REMOTE.news;
+    news.textContent = REMOTE.news;
     $("mShards").innerHTML = cur(save.shards, "big");
-    const t = save.total;
+    const tot = save.total;
     const rows = [
-      ["Забегов", fmtNum(save.runs)],
-      ["Закрыто", fmtNum(save.wins)],
-      ["Лучшее время", save.best ? fmtTime(save.best) : "—"],
-      ["Макс. уровень", fmtNum(save.bestLevel || 0)],
-      ["Убийств всего", fmtNum(t.kills)],
-      ["Боссов", fmtNum(t.bosses)]
+      [t("Забегов"), fmtNum(save.runs)],
+      [t("Побед"), fmtNum(save.wins)],
+      [t("Лучшее время"), save.best ? fmtTime(save.best) : "—"],
+      [t("Макс. уровень"), fmtNum(save.bestLevel || 0)],
+      [t("Убийств всего"), fmtNum(tot.kills)],
+      [t("Боссов"), fmtNum(tot.bosses)]
     ];
     $("mStats").innerHTML = rows.map(r =>
       "<div><span>" + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
@@ -618,12 +778,12 @@ const UI = {
       return '<div class="' + (done ? "done" : open ? "" : "lock") + '" style="--ac:' + ar.accent + '">' +
         '<span class="an">' + ar.name + "</span>" +
         (marks ? '<span class="mk">' + marks + "</span>" : "") +
-        '<span class="as">' + (done ? "пройдена" : open ? "открыта" : "закрыта") + "</span></div>";
+        '<span class="as">' + (done ? t("пройдена") : open ? t("открыта") : t("закрыта")) + "</span></div>";
     }).join("");
     $("bestTxt").textContent = save.beaten
-      ? "Игра пройдена. Первоисточник уничтожен."
-      : save.best ? "Лучший результат: " + fmtTime(save.best) + " · " + fmtNum(save.bestKills) + " убийств"
-        : "Ни одного забега — самое время начать.";
+      ? t("Игра пройдена. Первоисточник уничтожен.")
+      : save.best ? t("Лучший результат: {0} · {1} убийств", fmtTime(save.best), fmtNum(save.bestKills))
+        : t("Ни одного забега — самое время начать.");
   },
 
   buildShop() {
@@ -638,7 +798,7 @@ const UI = {
       el.className = "up" + (max ? " max" : "") + (poor ? " poor" : "");
       el.disabled = max || poor;
       el.innerHTML = '<div class="h"><span class="nm">' + u.name + "</span>" +
-        '<span class="cost">' + (max ? "МАКС" : cur(cost, poor ? "mute" : "")) + "</span></div>" +
+        '<span class="cost">' + (max ? t("МАКС") : cur(cost, poor ? "mute" : "")) + "</span></div>" +
         '<div class="d">' + u.d(Math.min(u.max, lvl + (max ? 0 : 1))) + "</div>" +
         '<div class="lv"><span class="pips">' + pipsFlex(lvl, u.max) + "</span>" +
         '<span class="lvn">' + lvl + " / " + u.max + "</span></div>";
@@ -671,7 +831,7 @@ const UI = {
   buildCollection() {
     const st = unlockStats();
     const unlockOf = id => UNLOCKS.find(x => x.id === id);
-    const needOf = id => { const u = unlockOf(id); return u ? u.text : "доступно сразу"; };
+    const needOf = id => { const u = unlockOf(id); return u ? u.text : t("доступно сразу"); };
     const progOf = id => {
       const u = unlockOf(id);
       return u ? unlockProgress(u, st).text : "";
@@ -694,18 +854,18 @@ const UI = {
       if (def.evolved) continue;
       total++; if (isUnlocked("w:" + id)) got++;
       const evo = def.evoTo ? WEAPONS[def.evoTo] : null;
-      const sub = evo ? "→ " + evo.name + " · " + PASSIVES[def.evoNeed].name : "без эволюции";
+      const sub = evo ? "→ " + evo.name + " · " + PASSIVES[def.evoNeed].name : t("без эволюции");
       rows += item("w:" + id, def, sub);
     }
-    h += '<div class="colsec"><h3>Оружие</h3><div class="colrow">' + rows + "</div></div>";
+    h += '<div class="colsec"><h3>' + t("Оружие") + '</h3><div class="colrow">' + rows + "</div></div>";
 
     rows = "";
     for (const id in PASSIVES) {
       const def = PASSIVES[id];
       total++; if (isUnlocked("p:" + id)) got++;
-      rows += item("p:" + id, def, "до ур. " + def.max);
+      rows += item("p:" + id, def, t("до ур. {0}", def.max));
     }
-    h += '<div class="colsec"><h3>Импланты</h3><div class="colrow">' + rows + "</div></div>";
+    h += '<div class="colsec"><h3>' + t("Импланты") + '</h3><div class="colrow">' + rows + "</div></div>";
 
     rows = "";
     for (let i = 0; i < CHARS.length; i++) {
@@ -714,7 +874,7 @@ const UI = {
       rows += item("c:" + c.id, { name: c.name, ico: WEAPONS[c.weapon].ico, color: WEAPONS[c.weapon].color },
         c.tag + " · " + WEAPONS[c.weapon].name);
     }
-    h += '<div class="colsec"><h3>Операторы</h3><div class="colrow">' + rows + "</div></div>";
+    h += '<div class="colsec"><h3>' + t("Операторы") + '</h3><div class="colrow">' + rows + "</div></div>";
 
     /* эволюции показываем отдельно: их не «открывают», их собирают в забеге */
     rows = "";
@@ -724,10 +884,10 @@ const UI = {
       const evo = WEAPONS[def.evoTo];
       rows += '<div class="colit evo">' + svg(ICONS[evo.ico], evo.color) +
         '<span class="tx"><span class="nm">' + evo.name + "</span>" +
-        '<span class="sub">' + def.name + " макс. + " + PASSIVES[def.evoNeed].name + " ур. 4</span></span>" +
+        '<span class="sub">' + t("{0} макс. + {1} ур. 4", def.name, PASSIVES[def.evoNeed].name) + "</span></span>" +
         '<span class="mark" style="color:var(--gold)">✦</span></div>';
     }
-    h += '<div class="colsec"><h3>Эволюции · собираются сундуком в забеге</h3>' +
+    h += '<div class="colsec"><h3>' + t("Эволюции · собираются сундуком в забеге") + "</h3>" +
       '<div class="colrow">' + rows + "</div></div>";
 
     $("colGrid").innerHTML = h;
@@ -747,20 +907,20 @@ const UI = {
       el.innerHTML = '<span class="tag">' + c.tag + "</span>" +
         '<span class="nm">' + c.name + "</span>" +
         '<span class="d">' + c.d + "</span>" +
-        '<span class="d">Стартовый модуль: <b style="color:' + WEAPONS[c.weapon].color + '">' + WEAPONS[c.weapon].name + "</b></span>" +
-        (owned ? '<span class="lock" style="color:var(--cyan)">' + (save.char === c.id ? "◆ ВЫБРАН" : "ДОСТУПЕН") + "</span>"
-          : !opened ? '<span class="lock">🔒 ' + (need ? need.text : "ещё закрыт") + "</span>"
+        '<span class="d">' + t("Стартовый модуль:") + ' <b style="color:' + WEAPONS[c.weapon].color + '">' + WEAPONS[c.weapon].name + "</b></span>" +
+        (owned ? '<span class="lock" style="color:var(--cyan)">' + (save.char === c.id ? t("◆ ВЫБРАН") : t("ДОСТУПЕН")) + "</span>"
+          : !opened ? '<span class="lock">🔒 ' + (need ? need.text : t("ещё закрыт")) + "</span>"
             : '<span class="lock">🔒 ' + cur(c.price) + "</span>");
       el.addEventListener("click", () => {
-        if (!opened) { this.toast("ЕЩЁ ЗАКРЫТО"); return; }
+        if (!opened) { this.toast(t("ЕЩЁ ЗАКРЫТО")); return; }
         if (owned) { save.char = c.id; Sfx.pick(); }
         else if (save.shards >= c.price) {
           save.shards -= c.price;
           save.owned = (save.owned || []).concat([c.id]);
           save.char = c.id;
           Sfx.evo();
-          this.toast("НАНЯТ: " + c.name.toUpperCase());
-        } else { this.toast("НЕ ХВАТАЕТ ОСКОЛКОВ"); return; }
+          this.toast(t("НАНЯТ: {0}", c.name.toUpperCase()));
+        } else { this.toast(t("НЕ ХВАТАЕТ ОСКОЛКОВ")); return; }
         writeSave();
         this.buildChars();
         this.syncShards();
@@ -804,25 +964,35 @@ bind("bQuit", () => {
   if (g.won) { g.state = "play"; endRun(true); return; }
   g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu");
 });
-bind("bAgain", () => startRun());
-bind("bMenu", () => { g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu"); });
+/* между забегами — единственное место для полноэкранной рекламы:
+   игрок сам нажал кнопку и ничего не теряет. Частоту режет платформа. */
+function toMenu() { g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu"); }
+bind("bAgain", () => Platform.interstitial(() => startRun()));
+bind("bMenu", () => Platform.interstitial(toMenu));
+bind("bReward", () => UI.claimReward());
+document.querySelectorAll(".langsw button").forEach(b =>
+  b.addEventListener("click", () => { Sfx.init(); Sfx.resume(); Sfx.pick(); I18N.choose(b.dataset.l); }));
+bind("bRevive", () => UI.watchRevive());
+bind("bGiveUp", () => UI.giveUp());
+bind("bLogin", () => UI.login());
 
 let wipeArmed = false;
 bind("bWipe", () => {
   const b = $("bWipe");
   if (!wipeArmed) {
     wipeArmed = true;
-    b.textContent = "Точно? Нажми ещё раз";
-    setTimeout(() => { wipeArmed = false; b.textContent = "Сбросить прогресс"; }, 4000);
+    b.textContent = t("Точно? Нажми ещё раз");
+    setTimeout(() => { wipeArmed = false; b.textContent = t("Сбросить прогресс"); }, 4000);
     return;
   }
   save = defaultSave();
   writeSave();
   wipeArmed = false;
-  b.textContent = "Сбросить прогресс";
+  b.textContent = t("Сбросить прогресс");
   UI.buildShop();
   UI.syncShards();
-  UI.toast("ПРОГРЕСС СБРОШЕН");
+  Platform.pushCloud(true);            // иначе облако вернуло бы старый прогресс
+  UI.toast(t("ПРОГРЕСС СБРОШЕН"));
 });
 
 /* ---------- горячие клавиши ------------------------------------------- */
@@ -830,7 +1000,7 @@ function hotkeys() {
   if (tookKey("m")) {
     const on = Sfx.toggle();
     save.sound = on; writeSave();
-    UI.toast(on ? "ЗВУК ВКЛ" : "ЗВУК ВЫКЛ");
+    UI.toast(on ? t("ЗВУК ВКЛ") : t("ЗВУК ВЫКЛ"));
   }
   const esc = tookKey("escape");
   const ent = tookKey("enter");
@@ -856,11 +1026,15 @@ function hotkeys() {
       if (esc || ent) { g.state = "play"; UI.hideAll(); clearPressed(); }
       break;
     case "levelup":
-      if (tookKey("r") || tookKey("к")) { doReroll(); break; }
+      if (tookKey("r")) { doReroll(); break; }
       for (let i = 0; i < 3; i++) if (tookKey(String(i + 1)) && UI.cards[i]) { takeCard(UI.cards[i]); break; }
       break;
     case "end":
-      if (ent) startRun();
+      if (ent) Platform.interstitial(() => startRun());
+      break;
+    case "revive":
+      if (ent) UI.watchRevive();
+      else if (esc) UI.giveUp();
       break;
   }
 }
@@ -871,24 +1045,19 @@ function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
   lastT = t;
-  hotkeys();
-  if (g.state === "play" && g.p) {
+  /* версия видна в меню, на паузе и в итогах, но не поверх боя */
+  const showVer = g.state !== "play" && g.state !== "levelup";
+  if (showVer !== UI._verShown) { UI._verShown = showVer; $("ver").hidden = !showVer; }
+  /* реклама или платформенная пауза: мир стоит, картинка остаётся */
+  const frozen = Platform.frozen;
+  if (!frozen) hotkeys();
+  if (g.state === "play" && g.p && !frozen) {
     update(dt);
     Sfx.music(dt, musicPush(), musicCfg());
     UI.syncHud();
   }
+  /* выбор карты — тоже часть забега, а пауза, итоги и меню — нет */
+  Platform.gameplay(!frozen && !!g.p && (g.state === "play" || g.state === "levelup"));
   render();
 }
-
-/* авто-пауза при уходе со вкладки */
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden && g.state === "play") { g.state = "pause"; UI.showPause(); }
-});
-
-/* ---------- старт ------------------------------------------------------ */
-loadSave();
-Sfx.on = save.sound !== false;
-resize();
-UI.syncShards();
-UI.show("menu");
-requestAnimationFrame(frame);
+/* старт игры — в 06-platform.js: сначала ждём SDK и облачное сохранение
