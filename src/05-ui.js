@@ -10,6 +10,9 @@ const UI = {
   show(name) {
     for (const k in this.screens) this.screens[k].classList.toggle("on", k === name);
     this.current = name;
+    /* на выборе карты тосты и плашка достижения уходят под экран:
+       иначе они ложатся прямо на текст карт */
+    document.body.classList.toggle("ovl-level", name === "level");
   },
   hideAll() { this.show(""); },
 
@@ -18,12 +21,20 @@ const UI = {
      Раскладку читаем только когда изменилось то, что влияет на перенос, —
      не каждый кадр. */
   placeQuests() {
-    const key = innerWidth + "|" + !$("rushStat").hidden + "|" + $("sKills").textContent.length +
-      "|" + $("sGold").textContent.length + "|" + $("sChest").textContent.length;
+    const boss = $("bossBar").classList.contains("on");
+    const key = innerWidth + "x" + innerHeight + "|" + !$("rushStat").hidden + "|" + $("sKills").textContent.length +
+      "|" + $("sGold").textContent.length + "|" + $("sChest").textContent.length + "|" + boss;
     if (key === this._qTopKey) return;
     this._qTopKey = key;
-    const left = document.querySelector(".topbar > div");
-    $("quests").style.top = Math.max(104, left.getBoundingClientRect().bottom + 10) + "px";
+    /* в портрете под часами ещё полоса опыта и полоса босса — панель
+       встаёт ниже самого нижнего из них */
+    let bottom = document.querySelector(".topbar > div").getBoundingClientRect().bottom;
+    const narrow = innerWidth <= 600;
+    if (narrow) {
+      bottom = Math.max(bottom, document.querySelector(".xprail").getBoundingClientRect().bottom);
+      if (boss) bottom = Math.max(bottom, $("bossBar").getBoundingClientRect().bottom);
+    }
+    $("quests").style.top = Math.max(narrow ? 0 : 104, bottom + 10) + "px";
   },
   enterPlay() {
     this._qTopKey = "";
@@ -200,7 +211,11 @@ const UI = {
     $("rackP").innerHTML = hp;
   },
 
+  syncSoundBtn() {
+    $("bSound").firstChild.nodeValue = (Sfx.on ? t("Звук: вкл") : t("Звук: выкл")) + " ";
+  },
   showPause() {
+    this.syncSoundBtn();
     const p = g.p;
     $("questPause").innerHTML = g.quests.length
       ? g.quests.map(q => this.questRow(q)).join("") : "";
@@ -958,6 +973,14 @@ bind("bHelpBack", () => UI.show("menu"));
 bind("bShopBack", () => UI.show("menu"));
 bind("bCharBack", () => UI.show("menu"));
 bind("bResume", () => { g.state = "play"; UI.hideAll(); clearPressed(); });
+/* звук: клавиша M и кнопка в паузе — на телефоне клавиатуры нет */
+function toggleSound() {
+  const on = Sfx.toggle();
+  save.sound = on; writeSave();
+  UI.toast(on ? t("ЗВУК ВКЛ") : t("ЗВУК ВЫКЛ"));
+  UI.syncSoundBtn();
+}
+bind("bSound", () => { Sfx.init(); toggleSound(); });
 bind("bQuit", () => {
   /* если забег уже засчитан (дожил до 15:00), выход из паузы закрывает его
      нормально — с осколками. Иначе это по-прежнему отказ без награды. */
@@ -997,11 +1020,7 @@ bind("bWipe", () => {
 
 /* ---------- горячие клавиши ------------------------------------------- */
 function hotkeys() {
-  if (tookKey("m")) {
-    const on = Sfx.toggle();
-    save.sound = on; writeSave();
-    UI.toast(on ? t("ЗВУК ВКЛ") : t("ЗВУК ВЫКЛ"));
-  }
+  if (tookKey("m")) toggleSound();
   const esc = tookKey("escape");
   const ent = tookKey("enter");
   switch (g.state) {

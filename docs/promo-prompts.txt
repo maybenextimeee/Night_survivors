@@ -1,0 +1,66 @@
+NIGHT SURVIVORS — ПРОМПТЫ ДЛЯ ГЕНЕРАЦИИ ПРОМОМАТЕРИАЛОВ (Nano Banana Pro)
+==========================================================================
+
+Промпты на английском. Соотношение сторон указано в каждом промпте; итоговый размер
+в пикселях указан в заголовке раздела.
+
+Требования Яндекс Игр к иконке и обложке:
+  • нельзя использовать скриншот из игры (пункт 5.6);
+  • без рамок и скруглённых углов (пункт 8.3.3);
+  • без элементов интерфейса — ни полосок здоровья, ни таймеров (пункт 8.3.4);
+  • если есть надпись — только "Night survivors", ровно так, как в игре (пункт 5.1.3);
+  • формат PNG.
+
+Палитра игры:
+  фон        #080a12 (почти чёрный тёмно-синий)
+  циан       #3ee8ff (герой, основной акцент)
+  маджента   #ff2f6e (враги, боссы)
+  золото     #ffc23d (ульта, сундуки)
+  лайм       #b6ff3d (кристаллы опыта)
+  фиолет     #a86bff
+
+
+---------------------------------------------------------
+1. ИКОНКА — 512×512, PNG, соотношение 1:1, БЕЗ ТЕКСТА (обязательно)
+---------------------------------------------------------
+
+Square game icon, 1:1. A sleek glowing cyan arrowhead-shaped neon ship in the center, pointing up, surrounded by a tight ring of hostile neon geometric shapes — magenta triangles, violet hexagons, orange pentagons drawn as glowing outlines — closing in on it. Small lime-green data crystals scattered around. Deep navy-black background (#080a12) with a faint perspective grid. Synthwave cyberpunk, strong neon glow and bloom, high contrast, clean vector look, readable at small sizes. All key elements inside the central circle. No text, no letters, no border, no frame, no rounded corners, no UI.
+
+
+---------------------------------------------------------
+2. ОБЛОЖКА — 800×470, PNG, примерно 17:10 (обязательно)
+---------------------------------------------------------
+
+Вариант С НАДПИСЬЮ:
+
+Wide game cover art, aspect ratio 17:10. A lone glowing cyan arrowhead ship in the lower center leaves a bright dash trail through a dense horde of neon geometric enemies — magenta triangles, violet hexagons, orange pentagons outlined in glowing light — swarming in from all sides across a dark neon city floor with a perspective grid. A huge dark silhouette of a boss looms in the background with magenta glowing edges. Plasma arcs and laser beams cut through the crowd. Title text at the top in bold futuristic squared sans-serif: "Night survivors" — "Night" in white, "survivors" in glowing cyan. Exact spelling "Night survivors", nothing else written. Colors: navy-black #080a12, cyan #3ee8ff, magenta #ff2f6e, gold #ffc23d accents. Synthwave cyberpunk, cinematic, crisp. No border, no frame, no rounded corners, no UI elements.
+
+Вариант БЕЗ НАДПИСИ (общий для русской и английской карточки):
+
+Wide game cover art, aspect ratio 17:10. A lone glowing cyan arrowhead ship in the lower center leaves a bright dash trail through a dense horde of neon geometric enemies — magenta triangles, violet hexagons, orange pentagons outlined in glowing light — swarming in from all sides across a dark neon city floor with a perspective grid. A huge dark silhouette of a boss looms in the background with magenta glowing edges. Plasma arcs and laser beams cut through the crowd. Colors: navy-black #080a12, cyan #3ee8ff, magenta #ff2f6e, gold #ffc23d accents. Synthwave cyberpunk, cinematic, crisp. No text, no letters, no border, no frame, no rounded corners, no UI elements.
+
+
+---------------------------------------------------------
+3. ОБЛОЖКА НА ВИТРИНУ — 1560×520, PNG или JPG, 3:1 (не обязательно)
+---------------------------------------------------------
+
+Ultra-wide banner, aspect ratio 3:1. Left third: title "Night survivors" in bold futuristic squared sans-serif, "Night" white, "survivors" glowing cyan, exact spelling, nothing else written. Right two thirds: a glowing cyan arrowhead ship dashing diagonally through a massive swarm of neon geometric enemies — magenta triangles, violet hexagons, orange pentagons — over a dark neon grid floor, gold sparks and lime data crystals flying. Deep navy-black background, synthwave cyberpunk, strong bloom, cinematic depth. No border, no frame, no rounded corners, no UI.
+
+
+---------------------------------------------------------
+4. MASKABLE-ИКОНКА — 512×512, PNG (не обязательно)
+---------------------------------------------------------
+Значимые элементы — в центральном круге: края обрезаются маской.
+
+Square app icon 1:1, maskable safe zone: one large glowing cyan arrowhead ship centered and occupying only the middle 60% of the image, three small magenta and violet neon geometric shapes around it, solid deep navy background #080a12 filling the entire square edge to edge. Neon glow, clean vector style. No text, no border, no rounded corners.
+
+
+---------------------------------------------------------
+ДОПОЛНЕНИЯ К ПРОМПТУ ДЛЯ КОРРЕКЦИИ РЕЗУЛЬТАТА
+---------------------------------------------------------
+
+  слишком мутно / размыто   → sharp edges, crisp neon lines, less blur
+  слишком пёстро            → limited palette, mostly cyan and magenta on dark navy
+  герой теряется            → the cyan ship is the brightest and largest element, clear focal point
+  буквы кривые              → render the title text exactly "Night survivors", clean typography, no extra characters
+  похоже на фото            → flat vector illustration style, not photorealistic

@@ -30,6 +30,16 @@ jobs:
         shell: pwsh
         run: ./build.ps1
 
+      # Архив для Яндекс Игр — тот же, что build.ps1 кладёт в build/ на компьютере.
+      # Скачать: вкладка Actions → нужный запуск → внизу блок Artifacts.
+      # Внутри index.html в корне — его можно сразу грузить в Консоль Яндекса.
+      - name: Сохранить архив для Яндекс Игр
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-survivors-yandex
+          path: build/yandex/
+          retention-days: 90
+
       # index.html лежит в репозитории, чтобы игру можно было открыть с диска.
       # Если он отстал от src/, сайт всё равно уедет свежий — но напомним,
       # что локальная копия устарела.
