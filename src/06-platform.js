@@ -265,7 +265,7 @@ const Metrica = {
   },
   /* цель с параметрами; сбой аналитики не должен ронять игру */
   goal(name, params) {
-    if (!this.on) return;
+    if (!this.on || g.demo) return;
     try { window.ym(METRICA_ID, "reachGoal", name, params); } catch (e) { }
   }
 };

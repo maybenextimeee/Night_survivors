@@ -8,7 +8,7 @@ $src = Join-Path $root "src"
 $read = { param($n) [System.IO.File]::ReadAllText((Join-Path $src $n)) }
 
 $shell = & $read "00-shell.html"
-$js = @("01-engine.js", "02-content.js", "03-game.js", "04-render.js", "05-ui.js", "06-platform.js", "07-touch.js", "08-i18n.js", "09-boot.js") |
+$js = @("01-engine.js", "02-content.js", "03-game.js", "04-render.js", "05-ui.js", "06-platform.js", "07-touch.js", "08-i18n.js", "09-demo.js", "10-boot.js") |
     ForEach-Object { & $read $_ }
 
 $body = $shell + "`r`n<script>`r`n" + ($js -join "`r`n") + "`r`n</" + "script>`r`n"
@@ -33,6 +33,8 @@ $head = @'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Night survivors — HTML5 survivors-like: продержись 15 минут в неоновом квартале.">
+<meta name="color-scheme" content="dark">
+<meta name="darkreader-lock">
 {FONTS}{SDK}</head>
 <body>
 '@

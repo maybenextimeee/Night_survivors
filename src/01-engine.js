@@ -21,7 +21,7 @@ const $ = id => document.getElementById(id);
 
 /* Версия игры: меняется с каждым изменением, пишется в углу меню и в
    CHANGELOG.md. Её же ставь в поле «Версия» черновика на Яндекс Играх. */
-const GAME_VERSION = "0.9.2";
+const GAME_VERSION = "0.9.3";
 
 /* ---------- удалённая конфигурация -------------------------------------
    Значения по умолчанию. На Яндекс Играх их можно переопределить флагами
@@ -165,9 +165,12 @@ const Sfx = {
     if (this.master) this.master.gain.value = this.on ? 0.5 : 0;
     return this.on;
   },
+  /* quiet — идёт кадр демо за меню (09-demo.js): его бой не звучит. В отличие
+     от on, это не настройка игрока, а флаг на время одного update(). */
+  quiet: false,
   /* базовый «блип»: осциллятор + огибающая */
   blip(freq, dur, type, vol, slide, dest) {
-    if (!this.ctx || !this.on) return;
+    if (!this.ctx || !this.on || this.quiet) return;
     type = type || "square"; vol = vol === undefined ? 0.18 : vol;
     const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -181,7 +184,7 @@ const Sfx = {
     o.start(t); o.stop(t + dur + 0.02);
   },
   noise(dur, vol, freq) {
-    if (!this.ctx || !this.on) return;
+    if (!this.ctx || !this.on || this.quiet) return;
     const t = this.ctx.currentTime, n = Math.max(1, (this.ctx.sampleRate * dur) | 0);
     const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -192,7 +195,8 @@ const Sfx = {
     src.connect(f); f.connect(g); g.connect(this.master);
     src.start(t);
   },
-  seq(notes, gap, fn) { for (let i = 0; i < notes.length; i++) setTimeout(fn.bind(null, notes[i], i), i * gap); },
+  /* отложенные ноты проверяют quiet уже после кадра, поэтому решаем сразу */
+  seq(notes, gap, fn) { if (this.quiet) return; for (let i = 0; i < notes.length; i++) setTimeout(fn.bind(null, notes[i], i), i * gap); },
   shoot() { this.blip(660, 0.06, "square", 0.05, -300); },
   slash() { this.noise(0.09, 0.06, 2600); },
   hit() { this.blip(rnd(180, 240), 0.04, "square", 0.03, -60); },
@@ -206,14 +210,14 @@ const Sfx = {
   dash() { this.noise(0.14, 0.08, 1800); },
   /* готовность: тихий высокий щелчок, чтобы не следить за углом экрана */
   ready() { this.blip(1560, 0.05, "triangle", 0.035, 180); },
-  ach() { this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
+  ach() { if (this.quiet) return; this.blip(784, 0.16, "sine", 0.05); setTimeout(() => this.blip(1175, 0.3, "sine", 0.045), 110); },
   /* крит: короткий яркий щелчок поверх обычного попадания */
   crit() { this.blip(1760, 0.06, "square", 0.045, 520); },
   cycle() {
     this.seq([0, 1, 2], 150, n => this.blip(220 / Math.pow(1.22, n), 0.6, "sawtooth", 0.14, -30));
     this.noise(1.1, 0.16, 300);
   },
-  ultReady() { this.blip(1420, 0.07, "triangle", 0.055, 120); setTimeout(() => this.blip(2130, 0.09, "triangle", 0.05, 160), 70); },
+  ultReady() { if (this.quiet) return; this.blip(1420, 0.07, "triangle", 0.055, 120); setTimeout(() => this.blip(2130, 0.09, "triangle", 0.05, 160), 70); },
   empty() { this.blip(220, 0.06, "square", 0.03, -70); },
   die() { this.seq([0, 1, 2, 3, 4], 130, (n) => this.blip(360 / (1 + n * 0.35), 0.34, "sawtooth", 0.15, -70)); },
   win() { this.seq([0, 4, 7, 12, 16, 19], 140, (n) => this.blip(330 * Math.pow(2, n / 12), 0.5, "triangle", 0.12)); },
@@ -360,6 +364,8 @@ addEventListener("blur", () => { mouse.down = mouse.right = false; });
 addEventListener("contextmenu", e => e.preventDefault());
 
 function axis() {
+  /* в демо за меню ведёт бот (09-demo.js), клавиши игрока ему не мешают */
+  if (Demo.live) return Demo.steer;
   /* палец на джойстике главнее клавиш: вектор уже аналоговый */
   if (typeof Touch !== "undefined" && Touch.stickId !== null) return { x: Touch.axis.x, y: Touch.axis.y };
   let x = 0, y = 0;

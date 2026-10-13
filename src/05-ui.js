@@ -63,6 +63,7 @@ const UI = {
 
   /* тосты лезут поверх боя, поэтому их не больше трёх и без повторов подряд */
   toast(txt) {
+    if (g.demo) return;                // бой за меню — фон, а не события
     const box = $("toast");
     const last = box.lastElementChild;
     if (last && last.textContent === txt) return;
@@ -1084,13 +1085,16 @@ function frame(t) {
   /* реклама или платформенная пауза: мир стоит, картинка остаётся */
   const frozen = Platform.frozen;
   if (!frozen) hotkeys();
+  /* за меню идёт демо-бой (09-demo.js); для платформы это не геймплей */
+  const demo = Demo.wanted();
   if (g.state === "play" && g.p && !frozen) {
     update(dt);
     Sfx.music(dt, musicPush(), musicCfg());
     UI.syncHud();
-  }
+  } else if (demo && !frozen) Demo.tick(dt);
   /* выбор карты — тоже часть забега, а пауза, итоги и меню — нет */
   Platform.gameplay(!frozen && !!g.p && (g.state === "play" || g.state === "levelup"));
-  render();
+  Demo.mark(demo);
+  if (demo) Demo.draw(); else render();
 }
 /* старт игры — в 06-platform.js: сначала ждём SDK и облачное сохранение

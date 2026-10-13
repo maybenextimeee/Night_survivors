@@ -48,7 +48,11 @@ const g = {
   arena: 0, arenaDef: null, bosses: [], roster: [],
   /* после финального босса забег уходит в бесконечный — боссы идут по кругу */
   endless: false, hyper: false, cycle: 0, adRevived: false,
-  runQuests: 0, firstHit: -1, achT: 0, runAch: []
+  runQuests: 0, firstHit: -1, achT: 0, runAch: [],
+  /* demo — идёт кадр демо за меню (09-demo.js): мир тот же, но сохранение,
+     интерфейс, звук и аналитика не трогаются. world растёт с каждым новым
+     миром — так демо видит, что настоящий забег занял g под себя. */
+  demo: false, world: 0
 };
 const scratch = [];
 /* отдельный буфер: неонки задеваются изнутри циклов, которые уже идут по scratch */
@@ -172,8 +176,10 @@ function chestLeft() {
 }
 function chestGoldNext() { return (g.chests + 1) % CHEST_GOLD_EVERY === 0; }
 
-function startRun() {
-  g.state = "play";
+/* мир забега с нуля: только состояние g, без сохранения и интерфейса —
+   на нём же стоит демо за главным меню */
+function resetWorld(charId) {
+  g.world++;
   g.time = 0; g.kills = 0; g.gold = 0; g.crits = 0; g.bonus = 0; g.bossIdx = 0; g.boss = null;
   g.spawnAcc = 0; g.pendingUps = 0; g.won = false; g.shake = 0; g.damageDealt = 0;
   g.chestT = 0; g.chests = 0; g.reaper = false; g.autoPick = null;
@@ -195,8 +201,14 @@ function startRun() {
   g.beams.length = g.wells.length = g.props.length = 0;
   g.pools.length = g.discs.length = 0;
   g.propT = 1.5;
-  g.p = makePlayer(save.char);
+  g.p = makePlayer(charId);
   g.cam.x = 0; g.cam.y = 0;
+  g.quests = [];
+}
+
+function startRun() {
+  resetWorld(save.char);
+  g.state = "play";
   save.runs++;
   writeSave();
   g.quests = makeQuests();
@@ -303,8 +315,8 @@ function killEnemy(e) {
     UI.toast(t("★ {0} ПОВЕРЖЕН", e.def.name));
     /* русское имя — стабильный ключ: при английском интерфейсе name подменён */
     Metrica.goal("boss_kill", runInfo({ boss: e.def.__ru ? e.def.__ru.name : e.def.name }));
-    if (e.def.reaper) { save.reaperKill = true; writeSave(); }
-    if (e.def.finalBoss) {
+    if (e.def.reaper && !g.demo) { save.reaperKill = true; writeSave(); }
+    if (e.def.finalBoss && !g.demo) {
       /* игра пройдена — но забег не обрывается: дальше идут круги */
       save.beaten = true;
       writeSave();
@@ -612,7 +624,7 @@ function modGreed() {
   return mul;
 }
 function spawnEnemy(def, x, y, forceElite) {
-  if (g.enemies.length >= MAX_ENEMIES) return null;
+  if (g.enemies.length >= (g.demo ? Demo.cap : MAX_ENEMIES)) return null;
   const d = difficulty();
   const elite = forceElite || Math.random() < 0.045 + (g.p ? g.p.luck : 0) + (g.hyper ? ARENA_MODS[0].elite : 0);
   const e = {
@@ -916,13 +928,16 @@ function tryEvolve() {
   w.lvl = 1;
   w.t = 0;
   w.hits = new Map();
-  questProgress("evolve", w.base, 1);
-  Metrica.goal("evolution", runInfo({ weapon: w.id }));
-  if (save.evoSeen.indexOf(w.id) < 0) { save.evoSeen.push(w.id); writeSave(); }
-  checkAch();
   recalc(p);
-  UI.syncRack();
-  UI.toast("✦ " + def.name.toUpperCase());
+  /* в демо эволюция только видна: в коллекцию и в статистику она не идёт */
+  if (!g.demo) {
+    questProgress("evolve", w.base, 1);
+    Metrica.goal("evolution", runInfo({ weapon: w.id }));
+    if (save.evoSeen.indexOf(w.id) < 0) { save.evoSeen.push(w.id); writeSave(); }
+    checkAch();
+    UI.syncRack();
+    UI.toast("✦ " + def.name.toUpperCase());
+  }
   Sfx.evo();
   g.shake = Math.max(g.shake, 14);
   burst(p.x, p.y, "#ffc23d", 34, 4);
@@ -953,6 +968,7 @@ function applyCard(c) {
 
 /* ---------- урон по игроку -------------------------------------------- */
 function hurtPlayer(dmg) {
+  if (g.demo) return;                  // бот демо не умирает и не мигает от ударов
   const p = g.p;
   if (p.inv > 0 || p.dashT > 0) return;
   const real = Math.max(1, dmg - p.armor);
@@ -1118,6 +1134,7 @@ function unlockStats() {
   };
 }
 function checkUnlocks() {
+  if (g.demo) return 0;                // демо ничего не открывает игроку
   const s = unlockStats();
   let opened = 0;
   for (let i = 0; i < UNLOCKS.length; i++) {
@@ -1166,6 +1183,7 @@ function achStats() {
   };
 }
 function checkAch() {
+  if (g.demo) return 0;
   const s = achStats();
   let got = 0;
   for (let i = 0; i < ACHIEVEMENTS.length; i++) {
@@ -1186,6 +1204,7 @@ function checkAch() {
 
 /* ---------- конец забега ---------------------------------------------- */
 function endRun(won) {
+  if (g.demo) return;
   if (g.state === "end") return;
   g.state = "end";
   const p = g.p;

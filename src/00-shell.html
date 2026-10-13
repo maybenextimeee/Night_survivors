@@ -163,6 +163,11 @@ body{
 .screen{position:fixed;inset:0;z-index:10;display:none;place-items:center;padding:24px;
   background:rgba(4,6,12,.82);backdrop-filter:blur(3px);overflow-y:auto}
 .screen.on{display:grid}
+/* за меню идёт демо-бой (09-demo.js): подложка и панели полупрозрачные,
+   чтобы бой был виден, а размытие под панелью держит текст читаемым */
+body.demo .screen{background:rgba(4,6,12,.3);backdrop-filter:none}
+body.demo .screen .panel{backdrop-filter:blur(4px);
+  background:linear-gradient(158deg,rgba(17,24,39,.74) 0%,rgba(13,18,32,.62) 42%,rgba(8,12,22,.76) 100%)}
 .panel{width:min(820px,100%);position:relative;padding:30px 32px;
   background:linear-gradient(158deg,#111827 0%,var(--panel) 42%,#080c16 100%);
   border:1px solid var(--line);
