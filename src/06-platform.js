@@ -32,6 +32,7 @@ const Platform = {
     if (typeof YaGames === "undefined") return false;
     try { this.sdk = await YaGames.init(); } catch (e) { this.sdk = null; return false; }
     const sdk = this.sdk;
+    Metrica.init();                    // счётчик — только когда игра точно на Яндексе
     /* язык портала (пункт 2.14). Игра пока только на русском, но язык
        читаем честно — когда появится перевод, переключение уже на месте */
     try { this.lang = (sdk.environment.i18n.lang || "ru").toLowerCase(); } catch (e) { }
@@ -231,6 +232,41 @@ const Platform = {
         }
       });
     } catch (e) { finish(); }
+  }
+};
+
+/* ---- Яндекс Метрика ----
+   Путь игрока внутри забега: старты, уровни, боссы, эволюции, покупки,
+   реклама. Встроенная статистика Консоли этого не показывает.
+   Счётчик заводится на metrika.yandex.ru без отметки «Принимать данные
+   только с указанных адресов», его номер ставится в METRICA_ID. Пока там 0,
+   аналитика выключена целиком. Грузится только в сборке для Яндекса: на
+   Pages и с диска данные не нужны. На каждое имя цели из README в Метрике
+   заводится цель «JavaScript-событие» с тем же идентификатором — без неё
+   параметры события в отчёт не попадут.                                  */
+const METRICA_ID = 0;
+const Metrica = {
+  on: false,
+  init() {
+    if (this.on || !METRICA_ID || !Platform.yandex) return;
+    /* стандартный загрузчик Метрики: пока tag.js не пришёл, вызовы копятся
+       в очереди ym.a, потом счётчик разбирает её сам */
+    window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+    window.ym.l = Date.now();
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://mc.yandex.ru/metrika/tag.js";
+    document.head.appendChild(s);
+    try {
+      /* вебвизор и карта кликов на canvas бесполезны и только тяжелят кадр */
+      window.ym(METRICA_ID, "init", { clickmap: false, trackLinks: false, accurateTrackBounce: true, webvisor: false });
+    } catch (e) { return; }
+    this.on = true;
+  },
+  /* цель с параметрами; сбой аналитики не должен ронять игру */
+  goal(name, params) {
+    if (!this.on) return;
+    try { window.ym(METRICA_ID, "reachGoal", name, params); } catch (e) { }
   }
 };
 

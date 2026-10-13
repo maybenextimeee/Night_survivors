@@ -21,12 +21,12 @@ const $ = id => document.getElementById(id);
 
 /* Версия игры: меняется с каждым изменением, пишется в углу меню и в
    CHANGELOG.md. Её же ставь в поле «Версия» черновика на Яндекс Играх. */
-const GAME_VERSION = "0.9.1";
+const GAME_VERSION = "0.9.2";
 
 /* ---------- удалённая конфигурация -------------------------------------
    Значения по умолчанию. На Яндекс Играх их можно переопределить флагами
    в Консоли (вкладка «Флаги») без перезаливки архива — см. 06-platform.js
-   и docs/RELEASE-YANDEX.md. Здесь всё уже в нужных типах. */
+   и таблицу флагов в README.md. Здесь всё уже в нужных типах. */
 const REMOTE = {
   xpMul: 1,            // множитель опыта
   shardMul: 1,         // множитель осколков за забег
@@ -52,6 +52,14 @@ const SHARD = '<svg class="shd" viewBox="0 0 16 20" fill="none" aria-hidden="tru
   '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" fill="currentColor" opacity=".16"/>' +
   '<path d="M8 .8 15.2 6v8L8 19.2.8 14V6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
   '<path d="M8 .8v18.4M.8 6l7.2 4 7.2-4" stroke="currentColor" stroke-width=".9" opacity=".5"/></svg>';
+/* Замок в пару к осколку: тот же язык — скошенные углы, полупрозрачная
+   заливка, ромб вместо круглой скважины. Эмодзи 🔒 рисовался системным
+   смайликом и выбивался из неона. */
+const LOCK = '<svg class="lk" viewBox="0 0 16 20" fill="none" aria-hidden="true">' +
+  '<path d="M4.5 9V6a3.5 3.5 0 0 1 7 0v3" stroke="currentColor" stroke-width="1.4"/>' +
+  '<path d="M2.5 9h11l1.7 1.7v6.6L13.5 19h-11L.8 17.3v-6.6z" fill="currentColor" opacity=".16"/>' +
+  '<path d="M2.5 9h11l1.7 1.7v6.6L13.5 19h-11L.8 17.3v-6.6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+  '<path d="M8 11.9l1.4 1.7L8 15.3l-1.4-1.7z" fill="currentColor"/></svg>';
 /* цена/баланс одним куском: иконка + число с разделителями */
 const cur = (n, cls) => '<span class="cur' + (cls ? " " + cls : "") + '">' +
   SHARD + '<b>' + fmtNum(n) + '</b></span>';

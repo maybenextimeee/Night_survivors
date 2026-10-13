@@ -1,6 +1,4 @@
 <title>Night survivors</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root{
   --ground:#080a12;
@@ -318,8 +316,15 @@ h2 .shards{font-size:15px}
 .chr .d{font-size:12px;color:var(--muted);line-height:1.5;font-family:var(--body);
   text-transform:none;letter-spacing:0}
 .chr .lock{font-family:var(--mono);font-size:11.5px;color:var(--gold);display:flex;
-  align-items:center;gap:6px;letter-spacing:.5px}
+  align-items:center;gap:7px;letter-spacing:.5px}
+.chr .lock .lk{width:12px;height:15px;flex:none;filter:drop-shadow(0 0 5px rgba(255,194,61,.45))}
 .chr .tag{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan)}
+/* моделька оператора в углу карточки — тот же контур, что в забеге */
+.chr{position:relative}
+.chr .tag,.chr .nm{padding-right:50px}
+.chr .shipv{position:absolute;top:12px;right:12px;width:46px;height:46px;
+  filter:drop-shadow(0 0 6px currentColor)}
+.chr.off .shipv{opacity:.4;filter:none}
 
 /* results */
 .tbl{display:grid;grid-template-columns:1fr auto;gap:7px 20px;margin-top:18px;font-family:var(--mono);
@@ -422,8 +427,8 @@ h2 .shards{font-size:15px}
 .colit.locked .nm{color:var(--muted)}
 .colit.locked .sub{color:var(--gold)}
 .colit.locked .mark{color:var(--line)}
-.colit.evo{border-color:rgba(255,194,61,.45)}
-.colit.evo .nm{color:var(--gold)}
+.colit.evo:not(.locked){border-color:rgba(255,194,61,.45)}
+.colit.evo:not(.locked) .nm,.colit.evo:not(.locked) .mark{color:var(--gold)}
 
 /* разбор урона по источникам на экране конца забега */
 .break{margin-top:20px;border-top:1px solid var(--line);padding-top:14px;
@@ -865,7 +870,7 @@ html[lang="en"] .arena.lock:after{content:"LOCKED"}
 
   /* главное меню */
   .menupanel{grid-template-columns:1fr;gap:14px;padding-top:20px}
-  .menupanel .mleft>.eyebrow,.menupanel .lede{display:none}
+  .menupanel .lede{display:none}
   .menupanel h1{font-size:40px}
   .menupanel .menu{margin-top:14px;gap:6px}
   .menu button{padding:10px 14px;font-size:13.5px}
@@ -1030,7 +1035,6 @@ body.ovl-level #toast,body.ovl-level #achPop{z-index:9}
       <button data-l="ru">Русский</button><button data-l="en">English</button>
     </div>
     <div class="mleft">
-      <p class="eyebrow">Забег начинается в полночь</p>
       <h1>Night<br><em>survivors</em></h1>
       <p class="lede">В полночь квартал уходит в офлайн, и неон остаётся один на один с тем,
         что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться

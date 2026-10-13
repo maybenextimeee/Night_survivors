@@ -277,7 +277,6 @@ const EN_UI = {
   "РЫВОК": "DASH",
   "УЛЬТА": "ULT",
   "НАВЫК": "SKILL",
-  "Забег начинается в полночь": "The run starts at midnight",
   "В полночь квартал уходит в офлайн, и неон остаётся один на один с тем, что выросло в его подсетях. Импланты стреляют сами — твоя работа продержаться пятнадцать минут.":
     "At midnight the quarter goes offline, and the neon is left alone with whatever grew in its subnets. Your implants fire on their own — your job is to last fifteen minutes.",
   "Начать забег": "Start run",

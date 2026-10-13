@@ -65,10 +65,15 @@ function makePlayer(charId) {
     ability: ABILITIES[save.ability] ? save.ability : "phantom",
     abCharge: 1, abLvl: 1, abRefund: 0, abGap: 0,  // заряды копятся, первый выдаём сразу
     chargeSeen: 1, dashSeen: false,                // для отлова момента готовности
-    readyT: 0, readyMax: FLASH_TIME, readyPow: 1, readyColor: "#3ee8ff",
+    readyT: 0, readyMax: FLASH_TIME, readyPow: 1, readyColor: ch.ship.color,
     dimT: 0, dimCd: 0,
     rush: 0, rushT: 0,
     char: ch, mods: m,
+    /* моделька: Path2D собираем один раз на забег, а не каждый кадр */
+    ship: {
+      color: ch.ship.color, line: ch.ship.line,
+      hull: new Path2D(ch.ship.hull), acc: ch.ship.acc ? new Path2D(ch.ship.acc) : null
+    },
     revive: metaLvl("revive") > 0 ? 1 : 0,
     baseHp: 100 + metaLvl("hp") * 15 + (m.hp || 0)
   };
@@ -181,6 +186,9 @@ function startRun() {
   g.runQuests = 0; g.firstHit = -1; g.achT = 0; g.runAch.length = 0;
   g.endless = false; g.hyper = false; g.cycle = 0; g.adRevived = false;
   setArena(save.arena);
+  /* режим запоминаем на старте: после Первоисточника g.endless включается
+     сам, а в аналитике нужен тот, что игрок выбрал */
+  g.mode = g.hyper && g.endless ? "hyper+endless" : g.endless ? "endless" : g.hyper ? "hyper" : "normal";
   g.enemies.length = g.bullets.length = g.ebullets.length = g.gems.length = 0;
   g.drops.length = g.mines.length = g.missiles.length = 0;
   g.parts.length = g.nums.length = g.slashes.length = g.zaps.length = 0;
@@ -196,6 +204,17 @@ function startRun() {
   clearPressed();
   UI.enterPlay();
   UI.showQuestIntro();
+  Metrica.goal("run_start", runInfo({ run: save.runs <= 5 ? String(save.runs) : "6+" }));
+}
+
+/* общие параметры забега для целей Метрики */
+function runInfo(extra) {
+  const p = g.p;
+  return Object.assign({
+    arena: g.arenaDef ? g.arenaDef.id : "", mode: g.mode || "normal",
+    char: p ? p.char.id : "", ability: p ? p.ability : "",
+    minute: Math.floor(g.time / 60)
+  }, extra);
 }
 
 /* ---------- вспомогательные боевые функции (их зовёт оружие) ----------- */
@@ -282,6 +301,8 @@ function killEnemy(e) {
     for (let i = 0; i < 6; i++) g.drops.push({ x: e.x + rnd(-60, 60), y: e.y + rnd(-60, 60), r: 9, type: "gold", v: 10 });
     g.drops.push({ x: e.x, y: e.y, r: 14, type: "chest" });
     UI.toast(t("★ {0} ПОВЕРЖЕН", e.def.name));
+    /* русское имя — стабильный ключ: при английском интерфейсе name подменён */
+    Metrica.goal("boss_kill", runInfo({ boss: e.def.__ru ? e.def.__ru.name : e.def.name }));
     if (e.def.reaper) { save.reaperKill = true; writeSave(); }
     if (e.def.finalBoss) {
       /* игра пройдена — но забег не обрывается: дальше идут круги */
@@ -773,6 +794,8 @@ function director(dt) {
 }
 
 /* ---------- опыт и уровни --------------------------------------------- */
+/* в Метрику уходят только вехи: цель на каждый уровень — шум, а не данные */
+const LEVEL_GOALS = [5, 10, 15, 20, 25, 30, 40, 50];
 function gainXp(v) {
   const p = g.p;
   p.xp += v * p.greedMul * p.xpMul * REMOTE.xpMul;
@@ -782,6 +805,7 @@ function gainXp(v) {
     p.xpNext = Math.round(10 + 7 * p.level + p.level * p.level * 0.62);
     p.ultMul = Math.min(2.5, 1 + (p.level - 1) * 0.02);
     g.pendingUps++;
+    if (LEVEL_GOALS.indexOf(p.level) >= 0) Metrica.goal("level_up", runInfo({ level: p.level }));
   }
   if (g.pendingUps > 0 && g.state === "play") openLevelUp();
 }
@@ -893,6 +917,7 @@ function tryEvolve() {
   w.t = 0;
   w.hits = new Map();
   questProgress("evolve", w.base, 1);
+  Metrica.goal("evolution", runInfo({ weapon: w.id }));
   if (save.evoSeen.indexOf(w.id) < 0) { save.evoSeen.push(w.id); writeSave(); }
   checkAch();
   recalc(p);
@@ -1100,6 +1125,7 @@ function checkUnlocks() {
     if (isUnlocked(u.id) || u.cur(s) < u.goal) continue;
     save.unlocked.push(u.id);
     opened++;
+    Metrica.goal("unlock", { id: u.id });
     UI.toast(t("★ ОТКРЫТО: {0}", u.name.toUpperCase()));
     Sfx.evo();
   }
@@ -1150,6 +1176,7 @@ function checkAch() {
     if (!ok) continue;
     save.ach.push(a.id);
     got++;
+    Metrica.goal("achievement", { id: a.id });
     if (g.runAch.indexOf(a.id) < 0) g.runAch.push(a.id);
     UI.achPop(a);
   }
@@ -1185,6 +1212,9 @@ function endRun(won) {
     save.curseWin = Math.max(save.curseWin || 0, metaLvl("curse"));
   }
   writeSave();
+  Metrica.goal("run_end", runInfo({
+    result: won ? "win" : "death", level: p.level, kills: g.kills, shards: total
+  }));
   checkUnlocks();
   checkAch();
   Platform.pushCloud(true);            // конец забега — пишем в облако сразу
@@ -1230,7 +1260,7 @@ function update(dt) {
       const a = (p.vx || p.vy) ? Math.atan2(p.vy, p.vx) : p.face;
       p.dvx = Math.cos(a) * 1180; p.dvy = Math.sin(a) * 1180;
       Sfx.dash();
-      for (let i = 0; i < 10; i++) g.parts.push({ x: p.x, y: p.y, vx: rnd(-60, 60), vy: rnd(-60, 60), life: 0.3, max: 0.3, color: "#3ee8ff", size: rnd(1, 3) });
+      for (let i = 0; i < 10; i++) g.parts.push({ x: p.x, y: p.y, vx: rnd(-60, 60), vy: rnd(-60, 60), life: 0.3, max: 0.3, color: p.ship.color, size: rnd(1, 3) });
     }
   }
   /* нос доворачивается к фактическому движению с конечной скоростью —
@@ -1627,7 +1657,7 @@ function update(dt) {
   if (!dashBusy && p.dashSeen) {
     p.readyT = p.readyMax = FLASH_TIME;
     p.readyPow = 0.85;
-    p.readyColor = "#3ee8ff";
+    p.readyColor = p.ship.color;
     Sfx.ready();
   }
   p.dashSeen = dashBusy;

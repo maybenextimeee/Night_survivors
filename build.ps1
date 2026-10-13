@@ -13,7 +13,19 @@ $js = @("01-engine.js", "02-content.js", "03-game.js", "04-render.js", "05-ui.js
 
 $body = $shell + "`r`n<script>`r`n" + ($js -join "`r`n") + "`r`n</" + "script>`r`n"
 
-# {SDK} заменяется на тег SDK только в сборке для Яндекса.
+# Шрифты вшиваем прямо в страницу: Google Fonts на Яндекс Играх режет CSP
+# (красная ошибка в консоли — повод для отказа), а из части сетей он не
+# открывается вовсе. Каждый url(файл.woff2) из fonts.css становится data:-URI.
+$fontDir = Join-Path $src "fonts"
+$fontCss = [System.IO.File]::ReadAllText((Join-Path $fontDir "fonts.css"))
+$fontCss = [regex]::Replace($fontCss, "url\(([\w.-]+\.woff2)\)", {
+    param($m)
+    $b64 = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $fontDir $m.Groups[1].Value)))
+    "url(data:font/woff2;base64,$b64)"
+})
+$fonts = "<style>`r`n" + $fontCss.Trim() + "`r`n</style>`r`n"
+
+# {FONTS} — вшитые шрифты, {SDK} — тег SDK только в сборке для Яндекса.
 $head = @'
 <!doctype html>
 <html lang="ru">
@@ -21,9 +33,10 @@ $head = @'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Night survivors — HTML5 survivors-like: продержись 15 минут в неоновом квартале.">
-{SDK}</head>
+{FONTS}{SDK}</head>
 <body>
 '@
+$head = $head.Replace("{FONTS}", $fonts)
 $tail = "`r`n</body>`r`n</html>`r`n"
 
 # Путь к SDK — относительный: так требует документация для игр,

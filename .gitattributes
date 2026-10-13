@@ -9,3 +9,6 @@
 *.png binary
 *.jpg binary
 *.gif binary
+
+# Шрифты — двоичные.
+*.woff2 binary

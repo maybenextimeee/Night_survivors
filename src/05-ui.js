@@ -670,7 +670,11 @@ const UI = {
     if (b.disabled || g.state !== "revive") return;
     b.disabled = true;
     Platform.rewarded(() => { this._revived = true; }, got => {
-      if (got && this._revived) { this._revived = false; adRevive(); }
+      if (got && this._revived) {
+        this._revived = false;
+        Metrica.goal("ad_reward", runInfo({ place: "revive" }));
+        adRevive();
+      }
       else b.disabled = false;       // закрыл раньше — можно попробовать ещё раз или сдаться
     });
   },
@@ -690,6 +694,7 @@ const UI = {
       Platform.pushCloud(true);
     }, got => {
       if (got) {
+        Metrica.goal("ad_reward", { place: "shards", amount: amount });
         this._reward = 0;
         rb.innerHTML = t("Награда получена: +") + cur(amount);
         this.toast(t("+{0} ОСКОЛКОВ", fmtNum(amount)));
@@ -701,7 +706,7 @@ const UI = {
   async login() {
     const ok = await Platform.login();
     this.syncShards();
-    if (ok) this.toast(t("ВХОД ВЫПОЛНЕН"));
+    if (ok) { this.toast(t("ВХОД ВЫПОЛНЕН")); Metrica.goal("login"); }
     if (this.current === "arena") this.showArenas();
   },
 
@@ -825,6 +830,7 @@ const UI = {
         save.shards -= c;
         save.meta[u.id] = l + 1;
         writeSave();
+        Metrica.goal("shop_buy", { item: u.id, level: l + 1 });
         Sfx.init(); Sfx.resume(); Sfx.coin();
         this.buildShop();
         this.syncShards();
@@ -891,18 +897,23 @@ const UI = {
     }
     h += '<div class="colsec"><h3>' + t("Операторы") + '</h3><div class="colrow">' + rows + "</div></div>";
 
-    /* эволюции показываем отдельно: их не «открывают», их собирают в забеге */
+    /* эволюции показываем отдельно: их не «открывают», их собирают в забеге.
+       Пока ни разу не собрана — тусклая, как всё закрытое, рецепт виден */
     rows = "";
+    let evoGot = 0, evoAll = 0;
     for (const id in WEAPONS) {
       const def = WEAPONS[id];
       if (!def.evoTo) continue;
       const evo = WEAPONS[def.evoTo];
-      rows += '<div class="colit evo">' + svg(ICONS[evo.ico], evo.color) +
+      const seen = save.evoSeen.indexOf(def.evoTo) >= 0;
+      evoAll++; if (seen) evoGot++;
+      rows += '<div class="colit evo' + (seen ? "" : " locked") + '">' + svg(ICONS[evo.ico], seen ? evo.color : "#4a5570") +
         '<span class="tx"><span class="nm">' + evo.name + "</span>" +
         '<span class="sub">' + t("{0} макс. + {1} ур. 4", def.name, PASSIVES[def.evoNeed].name) + "</span></span>" +
-        '<span class="mark" style="color:var(--gold)">✦</span></div>';
+        '<span class="mark">✦</span></div>';
     }
-    h += '<div class="colsec"><h3>' + t("Эволюции · собираются сундуком в забеге") + "</h3>" +
+    h += '<div class="colsec"><h3>' + t("Эволюции · собираются сундуком в забеге") +
+      " · " + evoGot + " / " + evoAll + "</h3>" +
       '<div class="colrow">' + rows + "</div></div>";
 
     $("colGrid").innerHTML = h;
@@ -918,14 +929,15 @@ const UI = {
       const opened = isUnlocked("c:" + c.id);
       const owned = opened && (c.price === 0 || (save.owned || []).indexOf(c.id) >= 0);
       const el = document.createElement("button");
-      el.className = "chr" + (save.char === c.id ? " sel" : "");
-      el.innerHTML = '<span class="tag">' + c.tag + "</span>" +
+      el.className = "chr" + (save.char === c.id ? " sel" : "") + (owned ? "" : " off");
+      el.innerHTML = shipSvg(c) +
+        '<span class="tag" style="color:' + c.ship.color + '">' + c.tag + "</span>" +
         '<span class="nm">' + c.name + "</span>" +
         '<span class="d">' + c.d + "</span>" +
         '<span class="d">' + t("Стартовый модуль:") + ' <b style="color:' + WEAPONS[c.weapon].color + '">' + WEAPONS[c.weapon].name + "</b></span>" +
         (owned ? '<span class="lock" style="color:var(--cyan)">' + (save.char === c.id ? t("◆ ВЫБРАН") : t("ДОСТУПЕН")) + "</span>"
-          : !opened ? '<span class="lock">🔒 ' + (need ? need.text : t("ещё закрыт")) + "</span>"
-            : '<span class="lock">🔒 ' + cur(c.price) + "</span>");
+          : !opened ? '<span class="lock">' + LOCK + (need ? need.text : t("ещё закрыт")) + "</span>"
+            : '<span class="lock">' + LOCK + cur(c.price) + "</span>");
       el.addEventListener("click", () => {
         if (!opened) { this.toast(t("ЕЩЁ ЗАКРЫТО")); return; }
         if (owned) { save.char = c.id; Sfx.pick(); }
@@ -933,6 +945,7 @@ const UI = {
           save.shards -= c.price;
           save.owned = (save.owned || []).concat([c.id]);
           save.char = c.id;
+          Metrica.goal("shop_buy", { item: "char:" + c.id });
           Sfx.evo();
           this.toast(t("НАНЯТ: {0}", c.name.toUpperCase()));
         } else { this.toast(t("НЕ ХВАТАЕТ ОСКОЛКОВ")); return; }
@@ -985,6 +998,7 @@ bind("bQuit", () => {
   /* если забег уже засчитан (дожил до 15:00), выход из паузы закрывает его
      нормально — с осколками. Иначе это по-прежнему отказ без награды. */
   if (g.won) { g.state = "play"; endRun(true); return; }
+  if (g.p) Metrica.goal("run_end", runInfo({ result: "quit", level: g.p.level, kills: g.kills }));
   g.state = "menu"; g.p = null; UI.leavePlay(); UI.syncShards(); UI.show("menu");
 });
 /* между забегами — единственное место для полноэкранной рекламы:

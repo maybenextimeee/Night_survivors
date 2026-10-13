@@ -397,13 +397,13 @@ function render() {
     ctx.globalCompositeOperation = "lighter";
     ctx.globalAlpha = 0.35;
     for (let k = 1; k <= 4; k++) {
-      ctx.drawImage(glow("#3ee8ff", 32), p.x - p.dvx * k * 0.014 - 26, p.y - p.dvy * k * 0.014 - 26, 52, 52);
+      ctx.drawImage(glow(p.ship.color, 32), p.x - p.dvx * k * 0.014 - 26, p.y - p.dvy * k * 0.014 - 26, 52, 52);
     }
     ctx.restore();
   }
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  ctx.drawImage(glow(p.hitFlash > 0 ? "#ff2f6e" : "#3ee8ff", 32), p.x - 37, p.y - 37, 74, 74);
+  ctx.drawImage(glow(p.hitFlash > 0 ? "#ff2f6e" : p.ship.color, 32), p.x - 37, p.y - 37, 74, 74);
   ctx.restore();
   /* блик готовности: вспыхивает, разрастается и гаснет; у ульты — сильнее */
   let shipAlpha = 1;
@@ -431,12 +431,13 @@ function render() {
     ctx.save();
     ctx.globalAlpha = shipAlpha;
     ctx.translate(p.x, p.y); ctx.rotate(p.face);
-    ctx.fillStyle = p.hitFlash > 0 ? "#ff2f6e" : "#0d1220";
-    ctx.strokeStyle = p.hitFlash > 0 ? "#fff" : "#7df1ff";
+    /* корпус оператора — контур из CHARS[].ship, тот же, что в меню */
+    const hit = p.hitFlash > 0;
+    ctx.fillStyle = hit ? "#ff2f6e" : "#0d1220";
+    ctx.strokeStyle = hit ? "#fff" : p.ship.line;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(12, 0); ctx.lineTo(-6.4, 7.2); ctx.lineTo(-3.2, 0); ctx.lineTo(-6.4, -7.2);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fill(p.ship.hull); ctx.stroke(p.ship.hull);
+    if (p.ship.acc) { ctx.fillStyle = hit ? "#fff" : p.ship.color; ctx.fill(p.ship.acc); }
     ctx.restore();
   }
 
